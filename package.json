@@ -1,0 +1,26 @@
+{
+    "name": "easescript",
+    "displayName": "%easescript%",
+    "description": "easescript",
+	"publisher":"easescript",
+    "version": "1.0.0",
+    "engines": {
+        "vscode": "^1.54.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [{
+            "id": "easescript",
+            "aliases": ["es","ES","easescript"],
+            "extensions": [".es",".ES"],
+            "configuration": "./language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "easescript",
+            "scopeName": "source.es",
+            "path": "./syntaxes/easescript.tmLanguage.json"
+        }]
+    }
+}
