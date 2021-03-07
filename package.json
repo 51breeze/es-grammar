@@ -1,14 +1,19 @@
 {
-    "name": "easescript",
-    "displayName": "%easescript%",
-    "description": "easescript",
-	"publisher":"easescript",
+    "name": "es",
+    "displayName": "EaseScript",
+    "description": "A EaseScript code grammar",
+	"publisher":"EaseScript",
     "version": "1.0.0",
     "engines": {
         "vscode": "^1.54.0"
     },
+    "icon": "images/logo.png",
     "categories": [
         "Programming Languages"
+    ],
+    "main":"./lib/extension",
+    "activationEvents": [
+        "onLanguage:easescript"
     ],
     "contributes": {
         "languages": [{
@@ -22,5 +27,13 @@
             "scopeName": "source.es",
             "path": "./syntaxes/easescript.tmLanguage.json"
         }]
-    }
+    },
+    "devDependencies": {
+        "easescript": "^0.0.1"
+    },
+    "keywords": [
+		"EaseScript",
+		"es"
+	],
+	"author": "664371281@qq.com"
 }
