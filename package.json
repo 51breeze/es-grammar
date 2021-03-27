@@ -29,7 +29,7 @@
         }]
     },
     "devDependencies": {
-        "easescript": "^0.0.1"
+        "easescript2": "^0.0.1"
     },
     "keywords": [
 		"EaseScript",
