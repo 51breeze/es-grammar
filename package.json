@@ -37,7 +37,23 @@
                 "scopeName": "source.es",
                 "path": "./syntaxes/easescript.tmLanguage.json"
             }
-        ]
+        ],
+        "configuration":{
+            "type": "object",
+            "title": "编译语法配置",
+            "properties": {
+                "EaseScript.Client": {
+                    "type": "string",
+                    "default": "es-javascript",
+                    "description": "客户端语法。多个用 '|' 隔开"
+                },
+                "EaseScript.Server": {
+                    "type": "string",
+                    "default": "es-php",
+                    "description": "服务端语法。多个用 '|' 隔开"
+                }
+            }
+        }
     },
     "dependencies": {
         "easescript": "^0.x.x"
