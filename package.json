@@ -1,9 +1,9 @@
 {
     "name": "es",
     "displayName": "EaseScript",
-    "description": "A EaseScript code grammar",
+    "description": "EaseScript code grammar",
     "publisher": "EaseScript",
-    "version": "1.0.9",
+    "version": "1.0.10",
     "engines": {
         "vscode": "^1.54.0"
     },
@@ -38,19 +38,19 @@
                 "path": "./syntaxes/easescript.tmLanguage.json"
             }
         ],
-        "configuration":{
+        "configuration": {
             "type": "object",
-            "title": "编译语法配置",
+            "title": "EaseScript",
             "properties": {
-                "EaseScript.Client": {
+                "EaseScript.SyntaxPlugins": {
                     "type": "string",
-                    "default": "es-javascript",
-                    "description": "客户端语法。多个用 '|' 隔开"
+                    "default": "",
+                    "description": "语法插件。多个用 '|' 隔开"
                 },
-                "EaseScript.Server": {
-                    "type": "string",
-                    "default": "es-php",
-                    "description": "服务端语法。多个用 '|' 隔开"
+                "EaseScript.LoadTypeFile": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "自动加载类型文件"
                 }
             }
         }
