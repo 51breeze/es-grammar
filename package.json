@@ -56,7 +56,7 @@
         }
     },
     "dependencies": {
-        "easescript": "^0.x.x"
+        "easescript": "0.x.x"
     },
     "keywords": [
         "EaseScript",
