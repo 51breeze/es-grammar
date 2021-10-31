@@ -56,8 +56,7 @@
         }
     },
     "dependencies": {
-        "easescript": "0.0.57",
-        "es-javascript": "0.0.14"
+        "easescript": "0.x.x"
     },
     "keywords": [
         "EaseScript",
