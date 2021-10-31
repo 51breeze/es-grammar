@@ -3,7 +3,7 @@
     "displayName": "EaseScript",
     "description": "EaseScript code grammar",
     "publisher": "EaseScript",
-    "version": "1.0.10",
+    "version": "1.0.11",
     "engines": {
         "vscode": "^1.54.0"
     },
@@ -56,7 +56,8 @@
         }
     },
     "dependencies": {
-        "easescript": "0.x.x"
+        "easescript": "0.0.57",
+        "es-javascript": "0.0.14"
     },
     "keywords": [
         "EaseScript",
