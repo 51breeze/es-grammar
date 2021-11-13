@@ -3,18 +3,14 @@
     "displayName": "EaseScript",
     "description": "EaseScript code grammar",
     "publisher": "EaseScript",
-    "version": "1.1.0",
+    "version": "1.0.11",
     "engines": {
         "vscode": "^1.54.0"
     },
-    "icon": "images/logo.png",
     "categories": [
         "Programming Languages"
     ],
-    "main": "./build/extension",
-    "scripts": {
-        "build": "grunt default"
-    },
+    "main": "./extension",
     "activationEvents": [
         "onLanguage:easescript"
     ],
@@ -31,14 +27,14 @@
                     ".es",
                     ".ES"
                 ],
-                "configuration": "./build/syntaxes/language-configuration.json"
+                "configuration": "./syntaxes/language-configuration.json"
             }
         ],
         "grammars": [
             {
                 "language": "easescript",
                 "scopeName": "source.es",
-                "path": "./build/syntaxes/easescript.tmLanguage.json"
+                "path": "./syntaxes/easescript.tmLanguage.json"
             }
         ],
         "configuration": {
@@ -70,9 +66,5 @@
     "repository": {
         "type": "git",
         "url": "git+https://github.com/51breeze/es-grammar.git"
-    },
-    "devDependencies": {
-        "grunt": "^1.4.1",
-        "grunt-contrib-copy": "^1.0.0"
     }
 }

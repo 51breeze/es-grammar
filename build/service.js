@@ -1,7 +1,10 @@
-const Compiler = require("easescript/lib/core/Compiler");
-const Namespace = require("easescript/lib/core/Namespace");
-const Parser = require("easescript/lib/core/Parser");
-const Utils = require("easescript/lib/core/Utils");
+const Lib =  require("./lib");
+const {
+    Compiler,
+    Namespace,
+    Parser,
+    Utils
+} = Lib;
 const parseExpressionAt = Parser.Parser.parseExpressionAt;
 const defaultOptions = {
     service:true,
