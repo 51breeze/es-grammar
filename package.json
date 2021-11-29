@@ -3,7 +3,7 @@
     "displayName": "EaseScript",
     "description": "EaseScript code grammar",
     "publisher": "EaseScript",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "engines": {
         "vscode": "^1.54.0"
     },
