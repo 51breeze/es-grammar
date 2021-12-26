@@ -8,6 +8,9 @@ const getOptions = ()=>{
     const SyntaxPlugins = config.get('SyntaxPlugins');
     const builder = typeof SyntaxPlugins === 'string' ? SyntaxPlugins.split('|').map( name=>name.trim() ) : [];
     const root = path.resolve(__dirname,'..');
+    const workspaceFolders = vscode.workspace.workspaceFolders.map( item=>{
+        return path.resolve( vscode.workspace.asRelativePath( item.uri, true ) );
+    });
     builder.forEach( name=>{
         try{
             require.resolve(name);
@@ -16,40 +19,42 @@ const getOptions = ()=>{
                 if( error ){
                     vscode.window.showErrorMessage(error.message);
                 }
-            });   
+            });
         }
     });
+
     return{
         autoLoadDescribeFile:LoadTypeFile !== false,
+        workspaceFolders,
         builder
     };
 }
 
-const provider = new Service( getOptions() );
-const collection = vscode.languages.createDiagnosticCollection("easescript");
-
-function diagnostic(document) {
-    if( document.languageId !== "easescript" )return;
-    const results = provider.check( document.fileName, document.getText() );
-    if( results ){
-       const items = results.map( item=>{
-            const range = item.range;
-            return new vscode.Diagnostic(
-                new vscode.Range( new vscode.Position( range.start.line-1, range.start.column ), new vscode.Position(range.end.line-1, range.end.column) ) ,
-                item.message,
-                item.kind,
-            );
-       });
-       if( items.length > 0){
-           collection.set(document.uri, items);
-       }else{
-           collection.clear();
-       }
-    }
-}
-
 exports.activate = function(context) {
-    
+
+    const provider =  new Service( getOptions() );
+    const collection = vscode.languages.createDiagnosticCollection("easescript");
+
+    function diagnostic(document) {
+        if( document.languageId !== "easescript" )return;
+        const results = provider.check( document.fileName, document.getText() );
+        if( results ){
+            const items = results.map( item=>{
+                    const range = item.range;
+                    return new vscode.Diagnostic(
+                        new vscode.Range( new vscode.Position( range.start.line-1, range.start.column ), new vscode.Position(range.end.line-1, range.end.column) ) ,
+                        `${item.message} (${item.code})`,
+                        item.kind,
+                    );
+            });
+            if( items.length > 0){
+                collection.set(document.uri, items);
+            }else{
+                collection.clear();
+            }
+        }
+    }
+
     if (vscode.window.activeTextEditor){
         diagnostic(vscode.window.activeTextEditor.document);
 	}
@@ -73,6 +78,12 @@ exports.activate = function(context) {
                 },500, event.document);
             }
         }
+    });
+
+    vscode.workspace.onDidChangeWorkspaceFolders(event=>{
+        provider.compiler.options.workspaceFolders = event.workspaceFolders.map( item=>{
+            return path.resolve( vscode.workspace.asRelativePath( item.uri, true ) );
+        });
     });
 
     context.subscriptions.push(vscode.languages.registerHoverProvider('easescript', {
