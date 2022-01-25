@@ -576,7 +576,7 @@ class Service{
         try{
             const stack = this.getStackByAt(file, startAt, 3, -1) 
             if( stack ){
-                const result = stack.definition(true);
+                const result = stack.definition();
                 if( result  ){
                     this.comments(result);
                 }
@@ -594,7 +594,7 @@ class Service{
         try{
             const stack = this.getStackByAt(file, startAt, 3, -1) 
             if( stack ){
-                const result = stack.definition(true);
+                const result = stack.definition();
                 if( result && !result.location  ){
                     return null;
                 }

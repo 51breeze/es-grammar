@@ -45,6 +45,12 @@ const CompletionItemKind ={
     Issue:26,
 };
 
+const MODULE_PROPERTY_ALL = 15
+const MODULE_PROPERTY_ACCESSOR = 1
+const MODULE_PROPERTY_VAR = 2
+const MODULE_PROPERTY_METHOD = 4
+const MODULE_PROPERTY_CONST = 8
+
 class Service{
     constructor(options){
         if( options ){
@@ -96,7 +102,7 @@ class Service{
         return result;
     }
 
-    getStackByAt(file,startAt,trys=3, both=0){
+    getStackByAt(file,startAt,trys=20, both=0){
        const compilation = this.parser(file);
        return compilation.getStackByAt(startAt, trys, both);;
     }
@@ -113,7 +119,7 @@ class Service{
                 const result = this.getProgramStackByLine(item,startAt);
                 if( result ){
                     return result;
-                }else if(item.node.start < startAt && item.node.end > startAt){
+                }else if(item.node.start <= startAt && item.node.end >= startAt){
                     return item;
                 }
             }else{
@@ -137,6 +143,8 @@ class Service{
                return this.getStackSpreadItems(stack.body);
             case stack.isPackageDeclaration :
             case stack.isClassDeclaration :
+            case stack.isEnumDeclaration :
+                return stack.properties;
             case stack.isInterfaceDeclaration :
                 body = stack.body;
             break;
@@ -179,16 +187,34 @@ class Service{
             break;
             case stack.isIfStatement :
             case stack.isWhenStatement :
-                return this.getStackSpreadItems(stack.consequent) || this.getStackSpreadItems(stack.alternate);
-            default:
-                body = stack.isBlockStatement ? stack.body : [];
+                return this.getStackSpreadItems(stack.consequent).concat( this.getStackSpreadItems(stack.alternate) );
+            case stack.isJSXElement :
+                return [stack.openingElement].concat(stack.children);
+            case stack.isJSXAttribute :
+                return [stack.name,stack.value]
+            case stack.isJSXExpressionContainer :
+                return [stack.expression]
+            case stack.isJSXOpeningElement :
+                return stack.attributes || [];
+            case stack.isBlockStatement  :
+                return stack.body;
+            case stack.isSwitchStatement  :
+                return [stack.condition].concat( stack.cases )
+            case stack.isSwitchCase  :
+                if( stack.condition ){
+                    body.push( stack.condition )
+                }
+                if( stack.consequent ){
+                    body.push( stack.consequent )
+                }
+                return body;
         }
         return body;
     }
 
     getContainStackByAt( stack, startAt ){
         const node = stack && stack.node;
-        if(node && node.start < startAt && node.end > startAt ){
+        if(node && node.start <= startAt && node.end >= startAt ){
             const body = this.getStackSpreadItems(stack);
             let len = body.length;
             while( len > 0 ){
@@ -290,19 +316,56 @@ class Service{
         return globals;
     }
 
-    getModuleProperties( typeModule, isStatic=false, ns=7 , excludes=null ){
+    getAllModuleRefs( root , merges){
+        let globals = merges || [];
+        root = root || Namespace.dataset;
+        root.modules.forEach( (item,name)=>{
+            let kind =  0
+            switch( true ){
+                case item.isInterface :
+                    kind = CompletionItemKind.Interface;
+                    break;   
+                case item.isClass :
+                    kind = CompletionItemKind.Class;
+                    break;    
+                case item.isEnum :
+                    kind = CompletionItemKind.Enum;
+                    break;    
+            }
+            if( kind ){
+                globals.push( {text:item.toString(),kind:kind, stack:item.compilation.getStackByModule(item)} )
+            }
+        });
+        root.children.forEach( child=>{
+            this.getAllModuleRefs( child, globals );
+        });
+        return globals;
+    }
+
+    getAllNamespaceRefs( root ){
+        let globals = [];
+        root = root || Namespace.dataset;
+        root.children.forEach( child=>{
+            globals.push( {text:child.fullName, kind:CompletionItemKind.Folder } )
+            globals = globals.concat( getAllNamespaceRefs( child ) )
+        });
+        return globals;
+    }
+
+    getModuleProperties( typeModule, isStatic=false, ns=7 , excludes=null, mode=MODULE_PROPERTY_ALL ){
         let properties = [];
         excludes = excludes === null ? new Set() : excludes;
         if( !typeModule || !typeModule.isModule ){
             return properties;
         }
-        const push=(item, kind)=>{
-            if( item ){
+        const push=(item, kind, type)=>{
+            if( item && (mode & type) === type ){
                 const text = item.value();
                 const key = text+kind;
                 if( !excludes.has( key ) ){
                     excludes.add( key );
-                    properties.push({text,kind,stack:item});
+                    const defaultValue = item.isPropertyDefinition && item.init && item.init.isLiteral ? item.init.value() : null;
+                    properties.push({text,kind,stack:item,defaultValue});
                 }
             }
         }
@@ -318,12 +381,12 @@ class Service{
                 const power = modifier[ item.modifier ? item.modifier.value() : "public" ] || 0;
                 if( (power | ns) === ns ){
                     if( item.isAccessor ){
-                        push(item.get || item.set,CompletionItemKind.Property);
+                        push(item.get || item.set,CompletionItemKind.Property, MODULE_PROPERTY_ACCESSOR);
                         //push(item.set,CompletionItemKind.Property);
                     }else if( item.isPropertyDefinition ){
-                        push( item, CompletionItemKind.Property);
+                        push( item, CompletionItemKind.Property, item.kind ==='const' ? MODULE_PROPERTY_CONST : MODULE_PROPERTY_VAR );
                     }else{
-                        push(item,CompletionItemKind.Method);
+                        push(item,CompletionItemKind.Method, MODULE_PROPERTY_METHOD );
                     }
                 }
             }
@@ -331,16 +394,16 @@ class Service{
         if( isStatic ){
             if( typeModule.isClass ){
                 every(typeModule.methods);
-                properties = properties.concat( this.getModuleProperties( typeModule.compilation.getGlobalTypeById("Class"), false, 1 ^ ns , excludes ) );
+                properties = properties.concat( this.getModuleProperties( typeModule.compilation.getGlobalTypeById("Class"), false, 1 ^ ns , excludes, mode ) );
             }
         }else{
             every(typeModule.members);
             if( typeModule.inherit ){
-                properties = properties.concat(this.getModuleProperties( typeModule.inherit, isStatic, 1 ^ ns, excludes) );
+                properties = properties.concat(this.getModuleProperties( typeModule.inherit, isStatic, 1 ^ ns, excludes, mode) );
             }
             if( typeModule.isDeclaratorModule ){
                 typeModule.implements.forEach(impModule=>{
-                    properties = properties.concat(this.getModuleProperties( impModule, isStatic, 1 ^ ns, excludes) );
+                    properties = properties.concat(this.getModuleProperties( impModule, isStatic, 1 ^ ns, excludes, mode) );
                 });
             }
         }
@@ -359,19 +422,42 @@ class Service{
                 }else if(module.isEnum){
                     kind = CompletionItemKind.Enum;
                 }
-                items.push({text:name,kind:kind})
+                items.push({text:module.toString(),kind:kind,stack:compilation.getStackByModule(module)})
             });
         });
         return items;
+    }
+
+    getLocalScopeRefs(context){
+        if( !context || !context.isStack )return [];
+        const scope   = context.scope;
+        const varKeys = scope && scope.getKeys(["block","function"]).map( name=>{
+            const token = scope.define(name);
+            const kind = token && token.isStack && token.kind==="const" ? CompletionItemKind.Constant : CompletionItemKind.Variable;
+            return {text:name,kind:kind,stack:token && token.isStack ? token : null};
+        });
+        const items = [];
+        if( context.module && context.module.inherit ){
+            const pStack = context.getParentStack( stack=>!!stack.isBlockStatement );
+            if( pStack.isBlockStatement && pStack.parentStack.isFunctionExpression && pStack.parentStack.parentStack.isMethodDefinition ){
+                if( !pStack.parentStack.parentStack.static){
+                    items.push({text:"super", kind:CompletionItemKind.Constant});
+                } 
+            }
+        }
+        return varKeys;
     }
 
     getCompletionItems(file, lineText, startAt, triggerKind){
 
         try{
             const compilation = this.parser(file);
+           
             if( !triggerKind ){
                const context = this.getProgramStackByLine(compilation.stack, startAt);
+              
                if( context ){
+                  
                     if( context.isPackageDeclaration ){
                         return ["import","class","interface","implements",'public','enum'].map( (name)=>{
                             return {text:name,kind:CompletionItemKind.Keyword}
@@ -381,37 +467,96 @@ class Service{
                             return {text:name,kind:CompletionItemKind.Keyword}
                         });
                     }
-                    const parentStack= context.getParentStack( item=>!!item.isFunctionExpression );
-                    const methodStack = parentStack && parentStack.parentStack;
-                    const isMethod = methodStack && methodStack.isMethodDefinition;
-                    const scope   = context.scope;
-                    const varKeys = scope.getKeys(["block","function"]).map( name=>{
-                        const token = scope.define(name);
-                        const kind = token && token.kind==="const" ? CompletionItemKind.Constant : CompletionItemKind.Variable;
-                        return {text:name,kind:kind}
-                    });
-                    const items = [];
-                    if( isMethod && !methodStack.static ){
-                        items.push({text:"super", kind:CompletionItemKind.Constant});
-                    }
-                    return varKeys.concat( this.getModuleImportRefs(compilation), this.getGlobalRefs(compilation), items );
+                    return this.getModuleImportRefs(compilation).concat( this.getGlobalRefs(compilation), this.getLocalScopeRefs(context) );
                 }
             }else if( triggerKind == ' ' ){
                 const context = this.getProgramStackByLine(compilation.stack, startAt);
                 if( context ){
                     if( context.isPackageDeclaration || context.isImportDeclaration ){
-                        return compilation.readSibling(true).map( item=>{
-                            if( item.folder ){
-                                return {text:item.name,kind:CompletionItemKind.Folder}
+                        return this.getAllModuleRefs();
+                    }else if( context.isJSXText ){
+                        return [];
+                    }
+                    else if( context.isJSXElement ){
+                        const contain = this.getContainStackByAt( context.openingElement, startAt);
+                        if( !contain ){
+                            return [];
+                        }
+                        const description = context.getSubClassDescription();
+                        const excludes = new Set();
+                        const attributes = context.openingElement.attributes || [];
+                        attributes.forEach(item=>{
+                            if( item.isMemberProperty){
+                                if( item.name.isJSXNamespacedName ){
+                                    excludes.add( item.name.name.value() );
+                                }else{
+                                    excludes.add( item.name.value() );
+                                }
                             }
-                            return {text:item.name,kind:CompletionItemKind.Module}
                         });
+                        const xmlnsDefault = Object.keys( this.compiler.options.jsx.xmlns.default ).map( name=>{
+                            return {text:name,kind:CompletionItemKind.Struct}
+                        });
+                        const properties = this.getModuleProperties(description, false, 4, excludes,MODULE_PROPERTY_VAR | MODULE_PROPERTY_ACCESSOR);
+                        properties.forEach( item=>{ 
+                            if( item.defaultValue ){
+                                item.insertText = `${item.text} = "${item.defaultValue}"`
+                            }else{
+                                item.insertText = `${item.text} = ""`
+                            }
+                        });
+                        return xmlnsDefault.concat( properties );
+
+                    } else if( context.isJSXAttribute ){
+
+                        if( context.isAttributeXmlns ){
+                            const xmlnsDefault = Object.keys( this.compiler.options.jsx.xmlns.sections ).map( name=>{
+                                return {text:name,kind:CompletionItemKind.Struct}
+                            });
+                            return xmlnsDefault.concat( this.getAllNamespaceRefs() );
+                        }
+
+                    }else if(context.parentStack && context.parentStack.isJSXAttribute ){
+
+                       if( context.parentStack.isAttributeXmlns ){
+
+                            const xmlnsDefault = Object.keys( this.compiler.options.jsx.xmlns.sections ).map( name=>{
+                                return {text:name,kind:CompletionItemKind.Struct}
+                            });
+                            return xmlnsDefault.concat( this.getAllNamespaceRefs() );
+
+                       }else if( context.parentStack.value === context ){
+
+                            const attrDesc = context.parentStack.parserAttributeValueStack( context.parentStack.name.value() );
+                            if( attrDesc ){
+                                const attrType = attrDesc.type();
+                                if( attrType.isUnionType ){
+                                    return attrType.elements.map( item=>{
+                                        return {text:item.type().toString().replace(/[\'\"]+/g,''),kind:CompletionItemKind.Text}
+                                    });
+                                }else if( attrType.isLiteralType ){
+                                    return attrType.toString().replace(/[\'\"]+/g,'');
+                                }
+                            }
+                            return []
+                            
+                       }
+
+                    }
+                    else{
+
+                        const pStack = context.getParentStack( stack=>!!(stack.isMethodDefinition || stack.isFunctionExpression || stack.isBlockStatement || stack.isSwitchCase) );
+                        if( pStack ){
+                            return ['var','const','function'].map( (name)=>{
+                                return {text:name,kind:CompletionItemKind.Keyword}
+                            }).concat( this.getGlobalRefs(), this.getLocalScopeRefs(context) )
+                        }
                     }
                 }
 
             }else if( triggerKind == '@' ){
 
-                return ["override","router"].map( (name)=>{
+                return this.compiler.options.annotations.map( (name)=>{
                     return {text:name,kind:CompletionItemKind.Keyword}
                 });
 
@@ -420,7 +565,6 @@ class Service{
                 const getStack = ()=>{
                     const context = this.getProgramStackByLine(compilation.stack, startAt);
                     let stack =  this.getLastStackByAt( context, startAt );
-                   
                     if( stack ){
                         stack = this.getCanInsertExpression( stack );
                         const type = stack.type();
@@ -478,12 +622,12 @@ class Service{
                             }
                         }
                     }
-                    return null;
+                    return context;
                 }
                
                 const stack = getStack();
                 if( stack ){
-
+                   
                     const classModule = stack.module;
                     const description = stack.description();
                     const inference = stack.inference(stack,true);
@@ -533,6 +677,38 @@ class Service{
                             return this.getModuleProperties( orign , false, ns);
                     }
                 }
+            }else if( triggerKind.charCodeAt(0) === 10 ){
+                const context = this.getProgramStackByLine(compilation.stack, startAt);
+                if( context ){
+
+                    if( context.isPackageDeclaration ){
+                        return ["import","class","interface","implements",'public','enum','static'].map( (name)=>{
+                            return {text:name,kind:CompletionItemKind.Keyword}
+                        }).concat(this.compiler.options.annotations.map( (name)=>{
+                            return {text:name,kind:CompletionItemKind.Keyword}
+                        }));
+                    }else if( context.isClassDeclaration ){
+                        return ['public','protected','private','static','var','const'].map( (name)=>{
+                            return {text:name,kind:CompletionItemKind.Keyword}
+                        }).concat(this.compiler.options.annotations.map( (name)=>{
+                            return {text:name,kind:CompletionItemKind.Keyword}
+                        }));
+                    }else if( context.isInterfaceDeclaration || context.isEnumDeclaration){
+                        return ['public','var','const'].map( (name)=>{
+                            return {text:name,kind:CompletionItemKind.Keyword}
+                        }).concat(this.compiler.options.annotations.map( (name)=>{
+                            return {text:name,kind:CompletionItemKind.Keyword}
+                        }));
+                    }else {
+                        const pStack = context.getParentStack( stack=>!!(stack.isMethodDefinition || stack.isFunctionExpression || stack.isBlockStatement || stack.isSwitchCase) );
+                        if( pStack ){
+                            return ['var','const','function'].map( (name)=>{
+                                return {text:name,kind:CompletionItemKind.Keyword}
+                            }).concat( this.getGlobalRefs(), this.getLocalScopeRefs(context) )
+                        }
+                    }
+                }  
+
             }
         }catch(e){
             if( this.options.debug ){
@@ -543,7 +719,7 @@ class Service{
     }
 
     completion(file, lineText, startAt, line, character, triggerKind){
-       const items = this.getCompletionItems(file, lineText, startAt,triggerKind);
+       const items = this.getCompletionItems(file, lineText, startAt-(triggerKind ? triggerKind.length : 0),triggerKind);
        return items; 
     }
 
@@ -552,8 +728,12 @@ class Service{
             const compilation = this.compiler.createCompilation( file );
             if( !compilation.isDescriptionType ){
                 if( !compilation.isValid(source) ){
-                    compilation.clear();
-                    compilation.createStack( source );
+                    const ast = compilation.previewSourceAst( source );
+                    if( ast ){
+                        compilation.clear();
+                        compilation.createStack(source, ast);
+                        compilation.source = source;
+                    }
                 }
                 if( compilation.stack ){
                     compilation.stack.parser();
