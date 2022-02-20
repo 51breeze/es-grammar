@@ -96,7 +96,7 @@
 						"name": "keyword.control.flow.easescript"
 					}
 				},
-				"end": "(?=[;}]|$|;|(?:^\\s*(?:abstract|async|class|const|declare|enum|export|function|import|interface|let|module|namespace|return|type|var)\\b))",
+				"end": "(?=[;}]|$|;|(?:^\\s*(?:abstract|async|class|final|static|const|declare|enum|export|function|import|interface|let|module|namespace|return|type|var)\\b))",
 				"patterns": [{
 					"include": "#expression"
 				}]
@@ -113,7 +113,7 @@
 				"match": "(?<![_$[:alnum:]])(?:(?<=\\.\\.\\.)|(?<!\\.))(with)(?![_$[:alnum:]])(?:(?=\\.\\.\\.)|(?!\\.))"
 			}, {
 				"name": "keyword.control.easescript",
-				"match": "(?<![_$[:alnum:]])(?:(?<=\\.\\.\\.)|(?<!\\.))(package|public|protected|private|override)(?![_$[:alnum:]])(?:(?=\\.\\.\\.)|(?!\\.))"
+				"match": "(?<![_$[:alnum:]])(?:(?<=\\.\\.\\.)|(?<!\\.))(package|final|static|public|protected|private|override)(?![_$[:alnum:]])(?:(?=\\.\\.\\.)|(?!\\.))"
 			}, {
 				"name": "keyword.other.debugger.easescript",
 				"match": "(?<![_$[:alnum:]])(?:(?<=\\.\\.\\.)|(?<!\\.))(debugger)(?![_$[:alnum:]])(?:(?=\\.\\.\\.)|(?!\\.))"

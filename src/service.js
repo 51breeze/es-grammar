@@ -102,32 +102,15 @@ class Service{
         return result;
     }
 
-    getStackByAt(file,startAt,trys=20, both=0){
+    getStackByAt(file,startAt,tryNum=20, both=0){
        const compilation = this.parser(file);
-       return compilation.getStackByAt(startAt, trys, both);;
+       return compilation.getStackByAt(startAt, tryNum, both);
     }
 
     getProgramStackByLine(stack, startAt ){
-        const body = stack && stack.body || [];
-        for(let index=0; index<body.length; index++){
-            const item = body[index];
-            if( item.isPackageDeclaration ||
-                item.isDeclaratorDeclaration ||
-                item.isClassDeclaration ||
-                item.isInterfaceDeclaration
-            ){
-                const result = this.getProgramStackByLine(item,startAt);
-                if( result ){
-                    return result;
-                }else if(item.node.start <= startAt && item.node.end >= startAt){
-                    return item;
-                }
-            }else{
-                const result = this.getContainStackByAt(item, startAt);
-                if( result ){
-                    return result;
-                }
-            }
+        const result = this.getContainStackByAt(stack, startAt);
+        if( result ){
+            return result;
         }
         return null;
     }
@@ -140,66 +123,144 @@ class Service{
             case stack.isArrowFunctionExpression :
             case stack.isFunctionDeclaration :
             case stack.isMethodDefinition :
-               return this.getStackSpreadItems(stack.body);
+               return [].concat(stack.params, stack.returnType, stack.body);
+
             case stack.isPackageDeclaration :
+                return stack.childStackItems.concat( stack.id );
+                
             case stack.isClassDeclaration :
-            case stack.isEnumDeclaration :
-                return stack.properties;
+            case stack.isDeclaratorDeclaration :
             case stack.isInterfaceDeclaration :
-                body = stack.body;
-            break;
+                return stack.childStackItems.concat(stack.id,stack.abstract,stack.modifier,stack.inherit,stack.static,stack.genericity,stack.annotations,stack.implements);
+
+            case stack.isProgram :
+                return stack.childStackItems;
+
+            case stack.isAnnotationDeclaration :
+            case stack.isAnnotationExpression :
+                return stack.body;
+
+            case stack.isEnumDeclaration :
+                return [stack.key,stack.inherit].concat(stack.imports,stack.annotations,stack.properties);
+
             case stack.isPropertyDefinition :
             case stack.isVariableDeclaration :
-                body = stack.declarations;
-            break;
+                return stack.declarations.concat( stack.annotations );
+
             case stack.isAssignmentExpression :
-                body = [stack.right];
-            break;
+                return [stack.left,stack.right];
+
+            case stack.isAssignmentPattern :
+                return [stack.left,stack.acceptType,stack.right];
+
             case stack.isVariableDeclarator :
-                body = [stack.init];
-            break;
+            case stack.isDeclarator :
+            case stack.isParamDeclarator :
+                return [stack.id,stack.acceptType,stack.init];
+
             case stack.isArrayExpression :
-                body = stack.elements;
-            break;
+                return stack.elements;
+
             case stack.isObjectExpression :
-                body = stack.properties.map( prop=>prop.init );
-            break;
+                return stack.properties;
+
+            case stack.isProperty :
+                return [stack.key,stack.init,stack.acceptType];
+
             case stack.isBinaryExpression :
-                body = [stack.left, stack.right];
-            break;
+                return [stack.left, stack.right];
+
             case stack.isAwaitExpression :
             case stack.isReturnStatement :
-                body = [stack.argument];
-            break;
+                return [stack.argument];
+
+            case stack.isObjectPattern :
+                return stack.properties;
+
             case stack.isExpressionStatement :
             case stack.isParenthesizedExpression :
-                body = [stack.expression];
-            break;
+                return [stack.expression];
+
             case stack.isMemberExpression :
-                body = [stack.object,stack.property];
-            break;
+            case stack.isTypeComputeDefinition :
+                return [stack.object,stack.property];
+
             case stack.isImportDeclaration :
-                body = [stack.specifiers];
-            break;
+                return [stack.specifiers];
+
             case stack.isNewExpression :
             case stack.isCallExpression :
-                body = [stack.callee].concat( stack.arguments );
-            break;
+                return [stack.callee].concat( stack.genericity, stack.arguments );
+
+            case stack.isTypeFunctionDefinition :
+                return stack.params.concat( stack.returnType );
+
+            case stack.isGenericDeclaration :
+            case stack.isTypeUnionDefinition :
+                return stack.elements;
+
+            case stack.isGenericTypeDeclaration :
+                return [stack.valueType,stack.extends];
+
+            case stack.isGenericTypeAssignmentDeclaration :
+            case stack.isTypeAssertExpression :
+            case stack.isTypeIntersectionDefinition :
+                return [stack.left,stack.right];
+
+            case stack.isTypeGenericDefinition :
+                return [stack.valueType].concat(stack.elements);
+
+            case stack.isTypeKeyofDefinition :
+            case stack.isTypeTupleRestDefinition :
+            case stack.isTypeDefinition :
+                return [stack.valueType];
+
+            case stack.isTypeObjectDefinition :
+                return stack.properties;
+
+            case stack.isTypeObjectPropertyDefinition :
+                return [stack.key,stack.init];
+
+            case stack.isTypeStatement :
+                return [stack.id,stack.init];
+
+            case stack.isTypeTypeofDefinition :
+                return [stack.expression];
+
+            case stack.isTypeTransformExpression :
+                return [stack.typeExpression,stack.referExpression];
+
+            case stack.isTypeTupleDefinition :
+                return stack.elements;
+
             case stack.isIfStatement :
             case stack.isWhenStatement :
-                return this.getStackSpreadItems(stack.consequent).concat( this.getStackSpreadItems(stack.alternate) );
+                return [stack.consequent,stack.alternate];
+
             case stack.isJSXElement :
                 return [stack.openingElement].concat(stack.children);
+
+            case stack.isJSXScript :
+                return [stack.openingElement].concat(stack.imports, stack.body);
+
+            case stack.isJSXStyle :
+                return [stack.openingElement];
+
             case stack.isJSXAttribute :
                 return [stack.name,stack.value]
+
             case stack.isJSXExpressionContainer :
                 return [stack.expression]
+
             case stack.isJSXOpeningElement :
                 return stack.attributes || [];
+
             case stack.isBlockStatement  :
                 return stack.body;
+
             case stack.isSwitchStatement  :
                 return [stack.condition].concat( stack.cases )
+
             case stack.isSwitchCase  :
                 if( stack.condition ){
                     body.push( stack.condition )
@@ -216,10 +277,10 @@ class Service{
         const node = stack && stack.node;
         if(node && node.start <= startAt && node.end >= startAt ){
             const body = this.getStackSpreadItems(stack);
-            let len = body.length;
+            let len = body && body.length;
             while( len > 0 ){
-                const expr = body[ --len ];
-                const result = this.getContainStackByAt(expr, startAt);
+                const childStack = body[ --len ];
+                const result = childStack ? this.getContainStackByAt(childStack, startAt) : null;
                 if( result ){
                     return result;
                 }
@@ -333,7 +394,7 @@ class Service{
                     break;    
             }
             if( kind ){
-                globals.push( {text:item.toString(),kind:kind, stack:item.compilation.getStackByModule(item)} )
+                globals.push( {text:item.namespace.getChain().concat( item.id ).join("."),kind:kind, stack:item.compilation.getStackByModule(item)} )
             }
         });
         root.children.forEach( child=>{
@@ -410,20 +471,22 @@ class Service{
         return properties;
     }
 
-    getModuleImportRefs(compilation){
+    getModuleImportRefs(compilation,context){
         const items = [];
         compilation.modules.forEach( (module,key)=>{
-            module.imports.forEach( (module,name)=>{
-                let kind = CompletionItemKind.Reference;
-                if( module.isClass ){
-                    kind = CompletionItemKind.Class;
-                }else if(module.isInterface){
-                    kind = CompletionItemKind.Interface;
-                }else if(module.isEnum){
-                    kind = CompletionItemKind.Enum;
-                }
-                items.push({text:module.toString(),kind:kind,stack:compilation.getStackByModule(module)})
-            });
+            if( !context || context === module ){
+                module.imports.forEach( (module,name)=>{
+                    let kind = CompletionItemKind.Reference;
+                    if( module.isClass ){
+                        kind = CompletionItemKind.Class;
+                    }else if(module.isInterface){
+                        kind = CompletionItemKind.Interface;
+                    }else if(module.isEnum){
+                        kind = CompletionItemKind.Enum;
+                    }
+                    items.push({text:module.namespace.getChain().concat( module.id ).join("."),kind:kind,stack:compilation.getStackByModule(module)})
+                });
+            }
         });
         return items;
     }
@@ -448,266 +511,207 @@ class Service{
         return varKeys;
     }
 
+    getDotCompletionItems(compilation, lineText, startAt){
+
+        const getStack = ()=>{
+            let context = this.getProgramStackByLine(compilation.stack, startAt);
+            if( context && context.parentStack && context.parentStack.isMemberExpression ){
+                if( context.parentStack.object === context ){
+                    context = context.parentStack.object
+                }else{
+                    context = context.parentStack;
+                }
+            }
+            return context; 
+        }
+       
+        const stack = getStack();
+        if( stack ){
+            const classModule = stack.module;
+            let description = null;
+            let type = null;
+            if( stack.isStack ){
+                description = stack.description();
+                type = stack.type();
+                if(type && type.isGenericType && type.hasConstraint ){
+                    type = type.inherit;
+                }
+            }
+
+            const getPower = ( type )=>{
+                if( type.isModule && (type.isClass || type.isEnum) ){
+                    let parent = classModule.inherit;
+                    while( parent && type !== parent ){
+                        parent = parent.inherit;
+                    }
+                    return classModule === type ? 7 : (parent === type ? 6 : 4);
+                }
+                return 4;
+            }
+
+            switch( true ){
+                case type.isLiteralObjectType :
+                    return Array.from(type.properties.keys()).map(name=>{
+                        return {text:name,kind:CompletionItemKind.Property}
+                    }).concat( this.getModuleProperties( Utils.getOriginType(type) , false, 4) );
+                case type.isModule :
+                case type.isClassGenericType :
+                    if( type.isInterface ){
+                        return this.getModuleProperties(type, false, 4);
+                    }else if( type.isClassType ){
+                        const ns = getPower( type.types[0] );
+                        return this.getModuleProperties(type.types[0] , true, ns);
+                    }else{
+                        const orign = Utils.getOriginType(type);
+                        const ns = getPower( orign );
+                        return this.getModuleProperties( orign , description===type, ns);
+                    }
+                case type.isNamespace :
+                    return Array.from( type.children.values() ).map( item=>{
+                        return {text:item.identifier,kind:CompletionItemKind.Folder}
+                    }).concat(Array.from( type.modules.values() ).map( item=>{
+                        return {text:item.id,kind:CompletionItemKind.Module}
+                    }));
+                default :
+                    const orign = Utils.getOriginType(type);
+                    const ns = getPower( orign );
+                    return this.getModuleProperties( orign , false, ns);
+            }
+        }
+    }
+
+    getSpaceCompletionItems(compilation, lineText, startAt){
+        const context = this.getProgramStackByLine(compilation.stack, startAt);
+        if( !context )return [];
+        if( context.isPackageDeclaration || context.isProgram ){
+            if( /^(import)\s/.test(lineText) ){
+                return this.getAllModuleRefs();
+            }
+        }else if( context.isJSXElement ){
+            const contain = this.getContainStackByAt( context.openingElement, startAt);
+            if( !contain ){
+                return [];
+            }
+            const description = context.getSubClassDescription();
+            const excludes = new Set();
+            const attributes = context.openingElement.attributes || [];
+            attributes.forEach(item=>{
+                if( item.isMemberProperty){
+                    if( item.name.isJSXNamespacedName ){
+                        excludes.add( item.name.name.value() );
+                    }else{
+                        excludes.add( item.name.value() );
+                    }
+                }
+            });
+            const xmlnsDefault = Object.keys( this.compiler.options.jsx.xmlns.default ).map( name=>{
+                return {text:name,kind:CompletionItemKind.Struct}
+            });
+            const properties = this.getModuleProperties(description, false, 4, excludes,MODULE_PROPERTY_VAR | MODULE_PROPERTY_ACCESSOR);
+            properties.forEach( item=>{ 
+                if( item.defaultValue ){
+                    item.insertText = `${item.text} = "${item.defaultValue}"`
+                }else{
+                    item.insertText = `${item.text} = ""`
+                }
+            });
+            return xmlnsDefault.concat( properties );
+        } else if( context.isJSXAttribute ){
+            if( context.isAttributeXmlns ){
+                const xmlnsDefault = Object.keys( this.compiler.options.jsx.xmlns.sections ).map( name=>{
+                    return {text:name,kind:CompletionItemKind.Struct}
+                });
+                return xmlnsDefault.concat( this.getAllNamespaceRefs() );
+            }
+        }else if( context.parentStack && context.parentStack.isJSXAttribute ){
+            if( context.parentStack.isAttributeXmlns ){
+                const xmlnsDefault = Object.keys( this.compiler.options.jsx.xmlns.sections ).map( name=>{
+                    return {text:name,kind:CompletionItemKind.Struct}
+                });
+                return xmlnsDefault.concat( this.getAllNamespaceRefs() );
+            }else if( context.parentStack.value === context ){
+                const attrDesc = context.parentStack.parserAttributeValueStack( context.parentStack.name.value() );
+                if( attrDesc ){
+                    const attrType = attrDesc.type();
+                    if( attrType.isUnionType ){
+                        return attrType.elements.map( item=>{
+                            return {text:item.type().toString().replace(/[\'\"]+/g,''),kind:CompletionItemKind.Text}
+                        });
+                    }else if( attrType.isLiteralType ){
+                        return attrType.toString().replace(/[\'\"]+/g,'');
+                    }
+                }
+            }
+        }
+        else{
+            // const pStack = context.getParentStack( stack=>!!(stack.isMethodDefinition || stack.isFunctionExpression || stack.isBlockStatement || stack.isSwitchCase) );
+            // if( pStack ){
+            //     return ['var','const','function'].map( (name)=>{
+            //         return {text:name,kind:CompletionItemKind.Keyword}
+            //     }).concat( this.getGlobalRefs(), this.getLocalScopeRefs(context) )
+            // }
+        }
+        return []
+        
+    }
+
     getCompletionItems(file, lineText, startAt, triggerKind){
 
         try{
             const compilation = this.parser(file);
-           
             if( !triggerKind ){
                const context = this.getProgramStackByLine(compilation.stack, startAt);
-              
                if( context ){
-                  
                     if( context.isPackageDeclaration ){
                         return ["import","class","interface","implements",'public','enum'].map( (name)=>{
                             return {text:name,kind:CompletionItemKind.Keyword}
                         });
                     }else if( context.isClassDeclaration || context.isInterfaceDeclaration){
-                        return ["public","protected","private","static"].map( (name)=>{
+                        return ["public","protected","private","static","implements","extends"].map( (name)=>{
                             return {text:name,kind:CompletionItemKind.Keyword}
                         });
                     }
-                    return this.getModuleImportRefs(compilation).concat( this.getGlobalRefs(compilation), this.getLocalScopeRefs(context) );
+                    return this.getModuleImportRefs(compilation, context.module).concat( this.getGlobalRefs(compilation), this.getLocalScopeRefs(context) );
                 }
             }else if( triggerKind == ' ' ){
-                const context = this.getProgramStackByLine(compilation.stack, startAt);
-                if( context ){
-                    if( context.isPackageDeclaration || context.isImportDeclaration ){
-                        return this.getAllModuleRefs();
-                    }else if( context.isJSXText ){
-                        return [];
-                    }
-                    else if( context.isJSXElement ){
-                        const contain = this.getContainStackByAt( context.openingElement, startAt);
-                        if( !contain ){
-                            return [];
-                        }
-                        const description = context.getSubClassDescription();
-                        const excludes = new Set();
-                        const attributes = context.openingElement.attributes || [];
-                        attributes.forEach(item=>{
-                            if( item.isMemberProperty){
-                                if( item.name.isJSXNamespacedName ){
-                                    excludes.add( item.name.name.value() );
-                                }else{
-                                    excludes.add( item.name.value() );
-                                }
-                            }
-                        });
-                        const xmlnsDefault = Object.keys( this.compiler.options.jsx.xmlns.default ).map( name=>{
-                            return {text:name,kind:CompletionItemKind.Struct}
-                        });
-                        const properties = this.getModuleProperties(description, false, 4, excludes,MODULE_PROPERTY_VAR | MODULE_PROPERTY_ACCESSOR);
-                        properties.forEach( item=>{ 
-                            if( item.defaultValue ){
-                                item.insertText = `${item.text} = "${item.defaultValue}"`
-                            }else{
-                                item.insertText = `${item.text} = ""`
-                            }
-                        });
-                        return xmlnsDefault.concat( properties );
-
-                    } else if( context.isJSXAttribute ){
-
-                        if( context.isAttributeXmlns ){
-                            const xmlnsDefault = Object.keys( this.compiler.options.jsx.xmlns.sections ).map( name=>{
-                                return {text:name,kind:CompletionItemKind.Struct}
-                            });
-                            return xmlnsDefault.concat( this.getAllNamespaceRefs() );
-                        }
-
-                    }else if(context.parentStack && context.parentStack.isJSXAttribute ){
-
-                       if( context.parentStack.isAttributeXmlns ){
-
-                            const xmlnsDefault = Object.keys( this.compiler.options.jsx.xmlns.sections ).map( name=>{
-                                return {text:name,kind:CompletionItemKind.Struct}
-                            });
-                            return xmlnsDefault.concat( this.getAllNamespaceRefs() );
-
-                       }else if( context.parentStack.value === context ){
-
-                            const attrDesc = context.parentStack.parserAttributeValueStack( context.parentStack.name.value() );
-                            if( attrDesc ){
-                                const attrType = attrDesc.type();
-                                if( attrType.isUnionType ){
-                                    return attrType.elements.map( item=>{
-                                        return {text:item.type().toString().replace(/[\'\"]+/g,''),kind:CompletionItemKind.Text}
-                                    });
-                                }else if( attrType.isLiteralType ){
-                                    return attrType.toString().replace(/[\'\"]+/g,'');
-                                }
-                            }
-                            return []
-                            
-                       }
-
-                    }
-                    else{
-
-                        const pStack = context.getParentStack( stack=>!!(stack.isMethodDefinition || stack.isFunctionExpression || stack.isBlockStatement || stack.isSwitchCase) );
-                        if( pStack ){
-                            return ['var','const','function'].map( (name)=>{
-                                return {text:name,kind:CompletionItemKind.Keyword}
-                            }).concat( this.getGlobalRefs(), this.getLocalScopeRefs(context) )
-                        }
-                    }
-                }
-
+                return this.getSpaceCompletionItems( compilation, lineText, startAt )
             }else if( triggerKind == '@' ){
-
                 return this.compiler.options.annotations.map( (name)=>{
                     return {text:name,kind:CompletionItemKind.Keyword}
                 });
-
             }else if(triggerKind=='.'){
-               
-                const getStack = ()=>{
-                    const context = this.getProgramStackByLine(compilation.stack, startAt);
-                    let stack =  this.getLastStackByAt( context, startAt );
-                    if( stack ){
-                        stack = this.getCanInsertExpression( stack );
-                        const type = stack.type();
-                        if(stack.isLiteral && !["string","regexp"].includes( type.toString().toLowerCase() ) ){
-                            return null;
-                        }
-                        if( stack.isIdentifier && type.isModule && type.isInterface){
-                            return null;
-                        }
-                        if( stack.isObjectExpression ){
-                            return null;
-                        }
-                        if( stack.isIdentifier || 
-                            stack.isLiteral    ||
-                            stack.isMemberExpression || 
-                            stack.isCallExpression || 
-                            stack.isThisExpression || 
-                            stack.isSuperExpression || 
-                            stack.isArrayExpression
-                        ){
-                            return stack;
-                        }
-                    }
-
-                    lineText = lineText.slice(0,-1);
-                    if( context && lineText ){
-                        lineText = lineText.replace(/^(import)\s+/,'');
-                        try{
-                            const parentStack= context.getParentStack( item=>!!item.isFunctionExpression );
-                            const methodStack = parentStack && parentStack.parentStack;
-                            const isMethod = methodStack && methodStack.isMethodDefinition;
-                            if( lineText ==="super" ){
-                                if( methodStack.module.inherit && !methodStack.static ){
-                                    return {type(){return methodStack.module.inherit}};
-                                }
-                                return null;
-                            }
-                            const options = {...this.options};
-                            if( isMethod ){
-                                options.isMethod = true;
-                                options.isAsync = false;
-                                options.generator = false;
-                                options.allowDirectSuper = methodStack.isConstructor;
-                            }
-                            const node = parseExpressionAt(lineText, 0, options);
-                            const nodeStack = Utils.createStack(compilation,node,context.scope,context.node);
-                            nodeStack.parentNode = context.node;
-                            nodeStack.parentStack = context;
-                            nodeStack.namespace = context.namespace;
-                            nodeStack.module = context.module;
-                            return nodeStack;
-                        }catch(e){
-                            if( this.options.debug ){
-                                console.log( e )
-                            }
-                        }
-                    }
-                    return context;
-                }
-               
-                const stack = getStack();
-                if( stack ){
-                   
-                    const classModule = stack.module;
-                    const description = stack.description();
-                    const inference = stack.inference(stack,true);
-                    let type = inference( stack.type() );
-                    if( type.isGenericType && type.hasConstraint ){
-                        type = type.inherit;
-                    }
-
-                    const getPower = ( type )=>{
-                        if( type.isModule && (type.isClass || type.isEnum) ){
-                            let parent = classModule.inherit;
-                            while( parent && type !== parent ){
-                                parent = parent.inherit;
-                            }
-                            return classModule === type ? 7 : (parent === type ? 6 : 4);
-                        }
-                        return 4;
-                    }
-
-                    switch( true ){
-                        case type.isLiteralObjectType :
-                            return Array.from(type.properties.keys()).map(name=>{
-                                return {text:name,kind:CompletionItemKind.Property}
-                            }).concat( this.getModuleProperties( Utils.getOriginType(type) , false, 4) );
-                        case type.isModule :
-                        case type.isClassGenericType :
-                            if( type.isInterface ){
-                                return this.getModuleProperties(type, false, 4);
-                            }else if( type.isClassType ){
-                                const ns = getPower( type.types[0] );
-                                return this.getModuleProperties(type.types[0] , true, ns);
-                            }else{
-                                const orign = Utils.getOriginType(type);
-                                const ns = getPower( orign );
-                                return this.getModuleProperties( orign , description===type, ns);
-                            }
-                        case type.isNamespace :
-                            return compilation.readSibling(true, type.toString() ).map( item=>{
-                                if( item.folder ){
-                                    return {text:item.name,kind:CompletionItemKind.Folder}
-                                }
-                                return {text:item.name,kind:CompletionItemKind.Module}
-                            });
-                        default :
-                            const orign = Utils.getOriginType(type);
-                            const ns = getPower( orign );
-                            return this.getModuleProperties( orign , false, ns);
-                    }
-                }
+                return this.getDotCompletionItems(compilation, lineText, startAt);
             }else if( triggerKind.charCodeAt(0) === 10 ){
-                const context = this.getProgramStackByLine(compilation.stack, startAt);
-                if( context ){
+                // const context = this.getProgramStackByLine(compilation.stack, startAt);
+                // if( context ){
 
-                    if( context.isPackageDeclaration ){
-                        return ["import","class","interface","implements",'public','enum','static'].map( (name)=>{
-                            return {text:name,kind:CompletionItemKind.Keyword}
-                        }).concat(this.compiler.options.annotations.map( (name)=>{
-                            return {text:name,kind:CompletionItemKind.Keyword}
-                        }));
-                    }else if( context.isClassDeclaration ){
-                        return ['public','protected','private','static','var','const'].map( (name)=>{
-                            return {text:name,kind:CompletionItemKind.Keyword}
-                        }).concat(this.compiler.options.annotations.map( (name)=>{
-                            return {text:name,kind:CompletionItemKind.Keyword}
-                        }));
-                    }else if( context.isInterfaceDeclaration || context.isEnumDeclaration){
-                        return ['public','var','const'].map( (name)=>{
-                            return {text:name,kind:CompletionItemKind.Keyword}
-                        }).concat(this.compiler.options.annotations.map( (name)=>{
-                            return {text:name,kind:CompletionItemKind.Keyword}
-                        }));
-                    }else {
-                        const pStack = context.getParentStack( stack=>!!(stack.isMethodDefinition || stack.isFunctionExpression || stack.isBlockStatement || stack.isSwitchCase) );
-                        if( pStack ){
-                            return ['var','const','function'].map( (name)=>{
-                                return {text:name,kind:CompletionItemKind.Keyword}
-                            }).concat( this.getGlobalRefs(), this.getLocalScopeRefs(context) )
-                        }
-                    }
-                }  
+                //     if( context.isPackageDeclaration ){
+                //         return ["import","class","interface","implements",'public','enum','static'].map( (name)=>{
+                //             return {text:name,kind:CompletionItemKind.Keyword}
+                //         }).concat(this.compiler.options.annotations.map( (name)=>{
+                //             return {text:name,kind:CompletionItemKind.Keyword}
+                //         }));
+                //     }else if( context.isClassDeclaration ){
+                //         return ['public','protected','private','static','var','const'].map( (name)=>{
+                //             return {text:name,kind:CompletionItemKind.Keyword}
+                //         }).concat(this.compiler.options.annotations.map( (name)=>{
+                //             return {text:name,kind:CompletionItemKind.Keyword}
+                //         }));
+                //     }else if( context.isInterfaceDeclaration || context.isEnumDeclaration){
+                //         return ['public','var','const'].map( (name)=>{
+                //             return {text:name,kind:CompletionItemKind.Keyword}
+                //         }).concat(this.compiler.options.annotations.map( (name)=>{
+                //             return {text:name,kind:CompletionItemKind.Keyword}
+                //         }));
+                //     }else {
+                //         const pStack = context.getParentStack( stack=>!!(stack.isMethodDefinition || stack.isFunctionExpression || stack.isBlockStatement || stack.isSwitchCase) );
+                //         if( pStack ){
+                //             return ['var','const','function'].map( (name)=>{
+                //                 return {text:name,kind:CompletionItemKind.Keyword}
+                //             }).concat( this.getGlobalRefs(), this.getLocalScopeRefs(context) )
+                //         }
+                //     }
+                // }  
 
             }
         }catch(e){
@@ -724,37 +728,33 @@ class Service{
     }
 
     check(file, source){
+        var errors = [];
         try{
             const compilation = this.compiler.createCompilation( file );
-            if( !compilation.isDescriptionType ){
+            if( compilation ){
+                errors = compilation.errors;
                 if( !compilation.isValid(source) ){
-                    const ast = compilation.previewSourceAst( source );
+                    const ast = compilation.parseAst( source );
                     if( ast ){
                         compilation.clear();
-                        compilation.createStack(source, ast);
+                        compilation.createStack(null, ast);
+                        compilation.ast = ast;
                         compilation.source = source;
+                        compilation.parser();
                     }
                 }
-                if( compilation.stack ){
-                    compilation.stack.parser();
-                    compilation.stack.checker();
-                }
-            }else{
-                compilation.parser();
-                compilation.checker();
+                return compilation.errors;
             }
-            return compilation.errors;
         }catch(e){
-            if( this.options.debug ){
-                console.log( e )
-            }
-            return [];
         }
+        return errors;
     }
 
     hover(file, startAt, line, character, word){
         try{
             const stack = this.getStackByAt(file, startAt, 3, -1) 
+            // const compilation = this.parser(file);
+            // const stack = this.getProgramStackByLine( compilation.stack , startAt )
             if( stack ){
                 const result = stack.definition();
                 if( result  ){

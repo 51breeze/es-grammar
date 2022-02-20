@@ -22,7 +22,7 @@ const getOptions = ()=>{
             });
         }
     });
-
+    
     return{
         autoLoadDescribeFile:LoadTypeFile !== false,
         workspaceFolders,
@@ -40,12 +40,12 @@ exports.activate = function(context) {
         const results = provider.check( document.fileName, document.getText() );
         if( results ){
             const items = results.map( item=>{
-                    const range = item.range;
-                    return new vscode.Diagnostic(
-                        new vscode.Range( new vscode.Position( range.start.line-1, range.start.column ), new vscode.Position(range.end.line-1, range.end.column) ) ,
-                        `${item.message} (${item.code})`,
-                        item.kind,
-                    );
+                const range = item.range;
+                return new vscode.Diagnostic(
+                    new vscode.Range( new vscode.Position( range.start.line-1, range.start.column ), new vscode.Position(range.end.line-1, range.end.column) ) ,
+                    `${item.message} (${item.code})`,
+                    item.kind,
+                );
             });
             if( items.length > 0){
                 collection.set(document.uri, items);
@@ -68,14 +68,14 @@ exports.activate = function(context) {
     let lastChangeId = null;
     vscode.workspace.onDidChangeTextDocument(event => {
         if (vscode.window.activeTextEditor && event.document === vscode.window.activeTextEditor.document) {
+            if( lastChangeId ){
+                clearTimeout( lastChangeId );
+            }
             if( event.contentChanges.length > 0){
-                if( lastChangeId ){
-                    clearTimeout( lastChangeId );
-                }
                 lastChangeId = setTimeout((document)=>{
                     diagnostic(document);
                     lastChangeId = null;
-                },500, event.document);
+                },100, event.document);
             }
         }
     });
@@ -136,20 +136,23 @@ exports.activate = function(context) {
             return (items || []).map( item=>{
                 const completionItem = new vscode.CompletionItem(item.text, item.kind);
                 completionItem.stack = item.stack;
+                if( item.insertText ){
+                    completionItem.insertText = item.insertText;
+                }
                 return completionItem;
             });
         },
         resolveCompletionItem(item, token) {
             if( item.stack ){
-                const def = item.stack.definition(true, item.stack.inference(null,true) );
+                const def = item.stack.definition();
                 if( def ){
-                    item.detail = def.expre; 
+                    item.detail = def.expre;
                 }
             }
             return item;
         }
         
-    },'.',' ','@'));
+    },'.',' ','@','\n'));
 
     // context.subscriptions.push(vscode.languages.registerCodeActionsProvider('easescript', {
     //     provideCodeActions(document, range, context, token) {

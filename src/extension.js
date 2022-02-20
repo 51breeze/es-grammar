@@ -22,7 +22,7 @@ const getOptions = ()=>{
             });
         }
     });
-
+    
     return{
         autoLoadDescribeFile:LoadTypeFile !== false,
         workspaceFolders,
@@ -75,7 +75,7 @@ exports.activate = function(context) {
                 lastChangeId = setTimeout((document)=>{
                     diagnostic(document);
                     lastChangeId = null;
-                },500, event.document);
+                },100, event.document);
             }
         }
     });

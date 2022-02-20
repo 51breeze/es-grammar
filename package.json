@@ -3,7 +3,7 @@
     "displayName": "EaseScript",
     "description": "EaseScript code grammar",
     "publisher": "EaseScript",
-    "version": "1.1.4",
+    "version": "1.1.5",
     "engines": {
         "vscode": "^1.54.0"
     },
@@ -22,16 +22,13 @@
         "languages": [
             {
                 "id": "easescript",
-                "aliases": [
-                    "es",
-                    "ES",
-                    "easescript"
-                ],
-                "extensions": [
-                    ".es",
-                    ".ES"
-                ],
-                "configuration": "./build/syntaxes/language-configuration.json"
+                "aliases": ["es","ES","easescript"],
+                "extensions": [".es",".ES"],
+                "configuration": "./build/syntaxes/language-configuration.json",
+                "icon": {
+                    "light": "images/icon-light.png",
+                    "dark": "images/icon-dark.png"
+                }
             }
         ],
         "grammars": [
