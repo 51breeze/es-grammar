@@ -81,9 +81,10 @@ exports.activate = function(context) {
     });
 
     vscode.workspace.onDidChangeWorkspaceFolders(event=>{
-        provider.compiler.options.workspaceFolders = event.workspaceFolders.map( item=>{
+        const workspaceFolders = event.workspaceFolders.map( item=>{
             return path.resolve( vscode.workspace.asRelativePath( item.uri, true ) );
         });
+        provider.onDidChangeWorkspace( workspaceFolders );
     });
 
     context.subscriptions.push(vscode.languages.registerHoverProvider('easescript', {

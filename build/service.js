@@ -1,3 +1,5 @@
+const path =  require("path");
+const fs =  require("fs");
 const Lib =  require("./lib");
 const {
     Compiler,
@@ -59,7 +61,14 @@ class Service{
             options =  Object.assign({}, defaultOptions);
         }
         this._options =  options;
+        const workspaceFolders = options.workspaceFolders;
+        const compiler = new Compiler( options );
+        const types = compiler.scanTypings(workspaceFolders);
+        compiler.loadTypes( types );
+        this._types = types;
+        this._compiler = compiler;
     }
+
     set options( value ){
         if(value && typeof value ==="object"){
             this._options = Object.assign(this._options,value);
@@ -68,14 +77,25 @@ class Service{
             }
         }
     }
+
     get options(){
         return this._options;
     }
+
     get compiler(){
-        if( this._compiler )return this._compiler;
-        this._compiler = new Compiler( this.options );
-        this._compiler.initialize();
         return this._compiler;
+    }
+
+    onDidChangeWorkspace( workspaceFolders ){
+        const compiler = this.compiler;
+        const types = compiler.scanTypings(workspaceFolders);
+        this._types.forEach( file=>{
+            if( !types.includes(file) ){
+                compiler.removeCompilation(file);
+            }
+        });
+        this._types = types;
+        compiler.loadTypes( types );
     }
 
     getCompilation(file){
@@ -85,7 +105,6 @@ class Service{
     parser(file){
         const compilation = this.getCompilation( file );
         compilation.parser();
-        compilation.checker();
         return compilation;
     }
 
