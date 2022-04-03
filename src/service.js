@@ -167,6 +167,7 @@ class Service{
                 return stack.declarations.concat( stack.annotations );
 
             case stack.isAssignmentExpression :
+            case stack.isLogicalExpression :
                 return [stack.left,stack.right];
 
             case stack.isAssignmentPattern :
@@ -191,6 +192,7 @@ class Service{
 
             case stack.isAwaitExpression :
             case stack.isReturnStatement :
+            case stack.isThrowStatement :
                 return [stack.argument];
 
             case stack.isObjectPattern :
@@ -199,6 +201,9 @@ class Service{
             case stack.isExpressionStatement :
             case stack.isParenthesizedExpression :
                 return [stack.expression];
+
+            case stack.isSequenceExpression :
+                return stack.expressions;    
 
             case stack.isMemberExpression :
             case stack.isTypeComputeDefinition :
@@ -771,9 +776,9 @@ class Service{
 
     hover(file, startAt, line, character, word){
         try{
-            const stack = this.getStackByAt(file, startAt, 3, -1) 
-            // const compilation = this.parser(file);
-            // const stack = this.getProgramStackByLine( compilation.stack , startAt )
+            //const stack = this.getStackByAt(file, startAt, 3, -1) 
+            const compilation = this.parser(file);
+            const stack = this.getProgramStackByLine( compilation.stack , startAt )
             if( stack ){
                 const result = stack.definition();
                 if( result  ){
@@ -791,7 +796,9 @@ class Service{
 
     definition(file, startAt, line, character, word){
         try{
-            const stack = this.getStackByAt(file, startAt, 3, -1) 
+            //const stack = this.getStackByAt(file, startAt, 3, -1) 
+            const compilation = this.parser(file);
+            const stack = this.getProgramStackByLine( compilation.stack , startAt )
             if( stack ){
                 const result = stack.definition();
                 if( result && !result.location  ){
