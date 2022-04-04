@@ -150,7 +150,7 @@ class Service{
             case stack.isClassDeclaration :
             case stack.isDeclaratorDeclaration :
             case stack.isInterfaceDeclaration :
-                return stack.childStackItems.concat(stack.id,stack.abstract,stack.modifier,stack.inherit,stack.static,stack.genericity,stack.annotations,stack.implements);
+                return stack.childStackItems.concat(stack.id,stack.inherit,stack.genericity,stack.annotations,stack.implements);
 
             case stack.isProgram :
                 return stack.childStackItems;
@@ -185,7 +185,7 @@ class Service{
                 return stack.properties;
 
             case stack.isProperty :
-                return [stack.key,stack.init,stack.acceptType];
+                return [stack.key,stack.acceptType,stack.init];
 
             case stack.isBinaryExpression :
                 return [stack.left, stack.right];
@@ -300,7 +300,7 @@ class Service{
     getContainStackByAt( stack, startAt ){
         const node = stack && stack.node;
         if(node && node.start <= startAt && node.end >= startAt ){
-            const body = this.getStackSpreadItems(stack);
+            const body = stack.childrenStack
             let len = body && body.length;
             while( len > 0 ){
                 const childStack = body[ --len ];
@@ -353,25 +353,25 @@ class Service{
         return stack;
     }
 
-    getLastStackByAt(stack, startAt){
-        if( !stack )return null;
-        const node = stack.node;
-        if( !(stack.isVariableDeclarator || stack.isAssignmentExpression || stack.isExpressionStatement || stack.isBinaryExpression) ){
-            if(node && node.end+1 == startAt ){
-                return stack;
-            }
-        }
-        const body = this.getStackSpreadItems(stack);
-        let len = body.length;
-        while( len > 0 ){
-            const expr = body[ --len ];
-            const result = this.getLastStackByAt(expr, startAt);
-            if( result ){
-                return result;
-            }
-        }
-        return null;
-    }
+    // getLastStackByAt(stack, startAt){
+    //     if( !stack )return null;
+    //     const node = stack.node;
+    //     if( !(stack.isVariableDeclarator || stack.isAssignmentExpression || stack.isExpressionStatement || stack.isBinaryExpression) ){
+    //         if(node && node.end+1 == startAt ){
+    //             return stack;
+    //         }
+    //     }
+    //     const body = this.getStackSpreadItems(stack);
+    //     let len = body.length;
+    //     while( len > 0 ){
+    //         const expr = body[ --len ];
+    //         const result = this.getLastStackByAt(expr, startAt);
+    //         if( result ){
+    //             return result;
+    //         }
+    //     }
+    //     return null;
+    // }
 
     getGlobalRefs(compilation){
         const globals = [];
@@ -508,7 +508,7 @@ class Service{
                     }else if(module.isEnum){
                         kind = CompletionItemKind.Enum;
                     }
-                    items.push({text:module.namespace.getChain().concat( module.id ).join("."),kind:kind,stack:compilation.getStackByModule(module)})
+                    items.push({text:module.getName(),kind:kind,stack:compilation.getStackByModule(module)})
                 });
             }
         });
@@ -604,18 +604,108 @@ class Service{
         }
     }
 
+    inPosition(stack, startAt){
+        return stack.node.start < startAt && stack.node.end > startAt;
+    }
+
+    isWebComponent(classModule){
+        while( classModule && classModule.isModule ){
+            const stack = classModule.compilation.getStackByModule( classModule );
+            if( stack && stack.annotations  && Array.isArray(stack.annotations) ){
+                if( stack.annotations.some( item=>item.name.toLowerCase() === 'webcomponent') ){
+                    return true;
+                }
+            }
+            classModule=classModule.inherit;
+        }
+        return false;
+    }
+
+    searchingUncloseTag(document,startAt){
+        const text = document.getText();
+        //const context = this.getProgramStackByLine(compilation.stack, startAt);
+        //const endAt = context && context.parentStack ? context.parentStack.node.start : 0;
+        const endAt = 0;
+        const tags = [];
+        const results = [];
+        let posAt = startAt;
+        let tagName = '';
+        let skip = false;
+        while( posAt > endAt ){
+            posAt--;
+            const code = text.charCodeAt(posAt);
+            if( code===34 || code===39 || code===96 ){
+                let backslash = 0;
+                while( text.charCodeAt(posAt-1) ===92 ){
+                    posAt--;
+                    backslash++;
+                }
+                if( backslash % 2 !== 0 ){
+                    skip = !skip;
+                    continue;
+                }
+            }
+
+            if( skip ){
+                continue;
+            }
+
+            if( code===62 ){
+                tags.push({tag:60,pos:posAt,close:false});
+            }else if( tags.length > 0 ){
+                if( code ===47 && text.charCodeAt(posAt-1) === 60 ){
+                    const tag = tags[ tags.length-1 ];
+                    tag.close = true;
+                    tag.start = posAt;
+                    tag.name = tagName;
+                    posAt--;
+                }else if( tags[ tags.length-1 ].tag === code ){
+                    const startTag = tags.pop();
+                    const endTag = tags.pop();
+                    startTag.start = posAt+1;
+                    startTag.name = tagName;
+                    if( !(endTag && endTag.close) ){
+                        results.push( startTag );
+                        break;
+                    }
+                }
+            }
+            if( (code>=65 && code <= 90) || (code>=97 && code <= 122) || code===58 || code===46){
+                tagName =text[posAt] + tagName;
+            }else{
+                tagName = '';
+            }
+        }
+        return results;
+    }
+
     getSpaceCompletionItems(compilation, lineText, startAt){
-        const context = this.getProgramStackByLine(compilation.stack, startAt);
+        let context = this.getProgramStackByLine(compilation.stack, startAt);
         if( !context )return [];
+
+        if( (context.isJSXExpressionContainer || 
+            (context.isLiteral && context.parentStack && context.parentStack.isJSXAttribute)) &&
+            !this.inPosition(context,startAt) ){
+            context = context.parentStack.parentStack;
+        }
+
+        if( context.isJSXIdentifier ){
+            if( context.parentStack.isJSXNamespacedName ){
+                context = context.parentStack.parentStack
+            }
+        }
+
+        if( context.isJSXAttribute && context.parentStack.isJSXOpeningElement && !this.inPosition(context,startAt) ){
+            context = context.parentStack;
+        }
+
         if( context.isPackageDeclaration || context.isProgram ){
             if( /^(import)\s/.test(lineText) ){
                 return this.getAllModuleRefs();
             }
-        }else if( context.isJSXElement ){
-            const contain = this.getContainStackByAt( context.openingElement, startAt);
-            if( !contain ){
-                return [];
-            }
+        }else if( context.isJSXOpeningElement && context.parentStack.isJSXElement && context.parentStack.isComponent ){
+
+            context = context.parentStack;
             const description = context.getSubClassDescription();
             const excludes = new Set();
             const attributes = context.openingElement.attributes || [];
@@ -648,39 +738,120 @@ class Service{
                 return xmlnsDefault.concat( this.getAllNamespaceRefs() );
             }
         }else if( context.parentStack && context.parentStack.isJSXAttribute ){
+
             if( context.parentStack.isAttributeXmlns ){
                 const xmlnsDefault = Object.keys( this.compiler.options.jsx.xmlns.sections ).map( name=>{
                     return {text:name,kind:CompletionItemKind.Struct}
                 });
                 return xmlnsDefault.concat( this.getAllNamespaceRefs() );
             }else if( context.parentStack.value === context ){
-                const attrDesc = context.parentStack.parserAttributeValueStack( context.parentStack.name.value() );
-                if( attrDesc ){
-                    const attrType = attrDesc.type();
-                    if( attrType.isUnionType ){
-                        return attrType.elements.map( item=>{
-                            return {text:item.type().toString().replace(/[\'\"]+/g,''),kind:CompletionItemKind.Text}
-                        });
-                    }else if( attrType.isLiteralType ){
-                        return attrType.toString().replace(/[\'\"]+/g,'');
+
+                if( context.parentStack.jsxElement.isComponent ){
+                    const description = context.parentStack.jsxElement.getSubClassDescription();
+                    const attrDesc = context.parentStack.getAttributeDescription( description );
+                    if( attrDesc ){
+                        const attrType = attrDesc.type();
+                        if( attrType.isUnionType ){
+                            return attrType.elements.map( item=>{
+                                return {text:item.type().toString().replace(/[\'\"]+/g,''),kind:CompletionItemKind.Text}
+                            });
+                        }else if( attrType.isLiteralType ){
+                            return attrType.toString().replace(/[\'\"]+/g,'');
+                        }
                     }
                 }
             }
         }
         else{
-            // const pStack = context.getParentStack( stack=>!!(stack.isMethodDefinition || stack.isFunctionExpression || stack.isBlockStatement || stack.isSwitchCase) );
-            // if( pStack ){
-            //     return ['var','const','function'].map( (name)=>{
-            //         return {text:name,kind:CompletionItemKind.Keyword}
-            //     }).concat( this.getGlobalRefs(), this.getLocalScopeRefs(context) )
-            // }
+           
         }
         return []
         
     }
 
-    getCompletionItems(file, lineText, startAt, triggerKind){
+    getStartTagCompletionItems(compilation, lineText, startAt){
 
+        let context = this.getProgramStackByLine(compilation.stack, startAt);
+        if( !(context && context.module) || !this.isWebComponent(context.module) ){
+            return [];
+        }
+
+        const importRefs = this.getModuleImportRefs(compilation).filter( item=>{
+           this.isWebComponent(item.stack.module)
+        })
+
+        let jsxElement = context.jsxElement;
+        let parent = context;
+        while( !jsxElement && parent.parentStack){
+            parent = parent.parentStack;
+            jsxElement = parent.jsxElement;
+        }
+
+        const components = new Map();
+        let xmlns = jsxElement ? jsxElement.jsxRootElement.xmlns : [];
+        if( xmlns && xmlns.length > 0 ){
+
+            const push=(ns, module)=>{
+                let data = components.get(ns);
+                if( !data ){
+                    components.set(ns,data=new Set());
+                }
+                data.add( module );
+            }
+
+            const getModule=(ns,object)=>{
+                if( object instanceof Namespace){
+                    object.modules.forEach( value=>{
+                        if( this.isWebComponent(value) ){
+                            push(ns, value);
+                        } 
+                    })
+                    object.children.forEach( value=>{
+                        getModule(ns,value)
+                    })
+                }else if( object.isModule && this.isWebComponent(object) ){
+                    push(ns, object)
+                }
+            }
+
+            xmlns.forEach( attr=>{
+                const ns = attr.name.value();
+                const value = attr.value.value();
+                const object = Namespace.fetch( value );
+                if( object ){
+                    getModule( ns , object)
+                }
+            });
+        }
+
+        components.forEach( (value,ns)=>{
+            value.forEach( module=>{
+                importRefs.push({
+                    text:module.getName(),
+                    kind:CompletionItemKind.Class,
+                    insertText:`${ns}:${module.id}></${ns}:${module.id}>`,
+                    stack:compilation.getStackByModule(module)
+                })
+            })
+        });
+
+        return  importRefs;
+
+    }
+
+    getCloseTagCompletionItems(compilation, lineText, startAt, document){
+        const results = this.searchingUncloseTag(document, startAt);
+        return results.map( (item)=>{
+            return {
+                text:item.name,
+                kind:CompletionItemKind.Snippet,
+                insertText:`${item.name}>`
+            }
+        });
+    }
+
+
+    getCompletionItems(file, lineText, startAt, triggerKind, document){
         try{
             const compilation = this.parser(file);
             if( !triggerKind ){
@@ -705,7 +876,16 @@ class Service{
                 });
             }else if(triggerKind=='.'){
                 return this.getDotCompletionItems(compilation, lineText, startAt);
-            }else if( triggerKind.charCodeAt(0) === 10 ){
+            }else if( triggerKind.charCodeAt(0) === 60 ){
+                return this.getStartTagCompletionItems(compilation, lineText, startAt )
+            }else if( triggerKind.charCodeAt(0) === 62 ){
+                //return this.getStartTagCompletionItems(compilation, lineText, startAt )
+            }else if( triggerKind.charCodeAt(0) === 47 ){
+                if( lineText.substr(-2).charCodeAt(0) === 60){
+                    return this.getCloseTagCompletionItems(compilation, lineText, startAt, document )
+                }
+            }
+            else if( triggerKind.charCodeAt(0) === 10 ){
                 // const context = this.getProgramStackByLine(compilation.stack, startAt);
                 // if( context ){
 
@@ -746,8 +926,8 @@ class Service{
         return [];
     }
 
-    completion(file, lineText, startAt, line, character, triggerKind){
-       const items = this.getCompletionItems(file, lineText, startAt-(triggerKind ? triggerKind.length : 0),triggerKind);
+    completion(file, lineText, startAt, line, character, triggerKind, document){
+       const items = this.getCompletionItems(file, lineText, startAt-(triggerKind ? triggerKind.length : 0),triggerKind, document);
        return items; 
     }
 
@@ -776,7 +956,6 @@ class Service{
 
     hover(file, startAt, line, character, word){
         try{
-            //const stack = this.getStackByAt(file, startAt, 3, -1) 
             const compilation = this.parser(file);
             const stack = this.getProgramStackByLine( compilation.stack , startAt )
             if( stack ){
