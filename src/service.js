@@ -645,13 +645,19 @@ class Service{
                     continue;
                 }
             }
-
+            
             if( skip ){
                 continue;
             }
 
             if( code===62 ){
-                tags.push({tag:60,pos:posAt,close:false});
+                var token = {tag:60,pos:posAt,single:false,close:false};
+                tags.push(token);
+                if( text.charCodeAt(posAt-1) === 47 ){
+                    posAt--;
+                    token.close = true;
+                    token.single = true;
+                }
             }else if( tags.length > 0 ){
                 if( code ===47 && text.charCodeAt(posAt-1) === 60 ){
                     const tag = tags[ tags.length-1 ];
@@ -661,12 +667,14 @@ class Service{
                     posAt--;
                 }else if( tags[ tags.length-1 ].tag === code ){
                     const startTag = tags.pop();
-                    const endTag = tags.pop();
-                    startTag.start = posAt+1;
-                    startTag.name = tagName;
-                    if( !(endTag && endTag.close) ){
-                        results.push( startTag );
-                        break;
+                    if( !startTag.single ){
+                        const endTag = tags.pop();
+                        startTag.start = posAt+1;
+                        startTag.name = tagName;
+                        if( !(endTag && endTag.close) || tagName !== endTag.name ){
+                            results.push( startTag );
+                            break;
+                        }
                     }
                 }
             }
@@ -727,6 +735,9 @@ class Service{
                     item.insertText = `${item.text} = "${item.defaultValue}"`
                 }else{
                     item.insertText = `${item.text} = ""`
+                    let startAt = item.insertText.length-1;
+                    let endAt;
+                    item.selection = {startAt,endAt};
                 }
             });
             return xmlnsDefault.concat( properties );
@@ -753,10 +764,20 @@ class Service{
                         const attrType = attrDesc.type();
                         if( attrType.isUnionType ){
                             return attrType.elements.map( item=>{
-                                return {text:item.type().toString().replace(/[\'\"]+/g,''),kind:CompletionItemKind.Text}
+                                return {
+                                    text:item.type().toString().replace(/[\'\"]+/g,''),
+                                    kind:CompletionItemKind.Text,
+                                    replace:{posAt:-1}
+                                }
                             });
                         }else if( attrType.isLiteralType ){
-                            return attrType.toString().replace(/[\'\"]+/g,'');
+                            return [
+                                {
+                                   text:attrType.toString().replace(/[\'\"]+/g,''),
+                                   kind:CompletionItemKind.Text,
+                                   replace:{posAt:-1}
+                                }
+                            ]
                         }
                     }
                 }

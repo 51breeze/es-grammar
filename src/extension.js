@@ -88,7 +88,13 @@ exports.activate = function(context) {
                         new vscode.Position( range.start.line, range.start.character+index ),
                         new vscode.Position( range.start.line, range.start.character+index ),
                     );
+                }else if( /^(\w+)\s=\s\"\"$/.test(content) ){
+                    vscode.window.activeTextEditor.selection = new vscode.Selection(
+                        new vscode.Position( range.start.line, range.start.character+(content.length-1) ),
+                        new vscode.Position( range.start.line, range.start.character+(content.length-1) ),
+                    );
                 }
+               
             }
         }
     });
@@ -152,6 +158,12 @@ exports.activate = function(context) {
                 completionItem.stack = item.stack;
                 if( item.insertText ){
                     completionItem.insertText = item.insertText;
+                }
+                if( item.replace ){
+                    completionItem.range =  new vscode.Range( 
+                        new vscode.Position(position.line, position.character + item.replace.posAt ),
+                        new vscode.Position(position.line, position.character + item.replace.posAt )
+                    );
                 }
                 return completionItem;
             });

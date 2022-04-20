@@ -2,6 +2,7 @@ const {exec} = require('child_process');
 const vscode = require('vscode');
 const path = require('path');
 const Service = require('./service');
+
 const getOptions = ()=>{
     const config = vscode.workspace.getConfiguration('EaseScript');
     const LoadTypeFile = config.get('LoadTypeFile');
@@ -72,10 +73,28 @@ exports.activate = function(context) {
                 clearTimeout( lastChangeId );
             }
             if( event.contentChanges.length > 0){
+
                 lastChangeId = setTimeout((document)=>{
                     diagnostic(document);
                     lastChangeId = null;
                 },100, event.document);
+
+                const content = event.contentChanges[0].text;
+                const range = event.contentChanges[0].range;
+                let index = content.indexOf('><');
+                if( index >= 0 ){
+                    index++;
+                    vscode.window.activeTextEditor.selection = new vscode.Selection(
+                        new vscode.Position( range.start.line, range.start.character+index ),
+                        new vscode.Position( range.start.line, range.start.character+index ),
+                    );
+                }else if( /^(\w+)\s=\s\"\"$/.test(content) ){
+                    vscode.window.activeTextEditor.selection = new vscode.Selection(
+                        new vscode.Position( range.start.line, range.start.character+(content.length-1) ),
+                        new vscode.Position( range.start.line, range.start.character+(content.length-1) ),
+                    );
+                }
+               
             }
         }
     });
@@ -133,12 +152,18 @@ exports.activate = function(context) {
             const start = document.offsetAt( position );
             const fileName = document.fileName;
             const lineText = document.lineAt(position).text.replace(/^[\s\t]+/,'');
-            const items = provider.completion(fileName,lineText,start,position.line,position.character,context.triggerCharacter);
+            const items = provider.completion(fileName,lineText,start,position.line,position.character,context.triggerCharacter, document);
             return (items || []).map( item=>{
                 const completionItem = new vscode.CompletionItem(item.text, item.kind);
                 completionItem.stack = item.stack;
                 if( item.insertText ){
                     completionItem.insertText = item.insertText;
+                }
+                if( item.replace ){
+                    completionItem.range =  new vscode.Range( 
+                        new vscode.Position(position.line, position.character + item.replace.posAt ),
+                        new vscode.Position(position.line, position.character + item.replace.posAt )
+                    );
                 }
                 return completionItem;
             });
@@ -153,7 +178,7 @@ exports.activate = function(context) {
             return item;
         }
         
-    },'.',' ','@','\n'));
+    },'.',' ','@','\n','<', '>','/'));
 
     // context.subscriptions.push(vscode.languages.registerCodeActionsProvider('easescript', {
     //     provideCodeActions(document, range, context, token) {
