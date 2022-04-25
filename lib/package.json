@@ -1,41 +1,30 @@
 {
-    "name": "es-grammar",
+    "name": "es",
     "displayName": "EaseScript",
     "description": "EaseScript code grammar",
     "publisher": "EaseScript",
-    "version": "1.1.7",
+    "version": "1.0.11",
     "engines": {
         "vscode": "^1.54.0"
     },
-    "icon": "images/logo.png",
     "categories": [
         "Programming Languages"
     ],
-    "main": "./lib/extension",
-    "scripts": {
-        "build": "grunt default --force",
-        "build:rollup": "rollup -c"
-    },
+    "main": "./extension",
     "activationEvents": [
         "onLanguage:easescript"
     ],
+    "icon": "../images/logo.png",
     "contributes": {
         "languages": [
             {
                 "id": "easescript",
-                "aliases": [
-                    "es",
-                    "ES",
-                    "easescript"
-                ],
-                "extensions": [
-                    ".es",
-                    ".ES"
-                ],
-                "configuration": "./lib/syntaxes/language-configuration.json",
+                "aliases": ["es","ES","easescript"],
+                "extensions": [".es",".ES"],
+                "configuration": "./syntaxes/language-configuration.json",
                 "icon": {
-                    "light": "images/icon-light.png",
-                    "dark": "images/icon-dark.png"
+                    "light": "../images/icon-light.png",
+                    "dark": "../images/icon-dark.png"
                 }
             }
         ],
@@ -43,7 +32,7 @@
             {
                 "language": "easescript",
                 "scopeName": "source.es",
-                "path": "./lib/syntaxes/easescript.tmLanguage.json"
+                "path": "./syntaxes/easescript.tmLanguage.json"
             }
         ],
         "configuration": {
@@ -64,7 +53,8 @@
         }
     },
     "dependencies": {
-        "easescript": "*"
+        "easescript": "0.x.x",
+        "es-javascript": "0.0.14"
     },
     "keywords": [
         "EaseScript",
@@ -74,18 +64,5 @@
     "repository": {
         "type": "git",
         "url": "git+https://github.com/51breeze/es-grammar.git"
-    },
-    "devDependencies": {
-        "@rollup/plugin-json": "^4.1.0",
-        "grunt": "^1.4.1",
-        "grunt-contrib-copy": "^1.0.0",
-        "grunt-contrib-uglify": "^5.2.1",
-        "grunt-rollup": "^11.9.0",
-        "install": "^0.13.0",
-        "npm": "^8.7.0",
-        "rollup-plugin-commonjs": "^10.1.0",
-        "rollup-plugin-node-resolve": "^5.2.0",
-        "rollup-plugin-replace": "^2.2.0",
-        "rollup-plugin-uglify": "^6.0.4"
     }
 }

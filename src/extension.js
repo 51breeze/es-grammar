@@ -26,7 +26,7 @@ const getOptions = ()=>{
     
     return{
         autoLoadDescribeFile:LoadTypeFile !== false,
-        workspaceFolders,
+        cwd:workspaceFolders[0],
         builder
     };
 }
@@ -38,21 +38,25 @@ exports.activate = function(context) {
 
     function diagnostic(document) {
         if( document.languageId !== "easescript" )return;
-        const results = provider.check( document.fileName, document.getText() );
-        if( results ){
-            const items = results.map( item=>{
-                const range = item.range;
-                return new vscode.Diagnostic(
-                    new vscode.Range( new vscode.Position( range.start.line-1, range.start.column ), new vscode.Position(range.end.line-1, range.end.column) ) ,
-                    `${item.message} (${item.code})`,
-                    item.kind,
-                );
-            });
-            if( items.length > 0){
-                collection.set(document.uri, items);
-            }else{
-                collection.clear();
+        try{
+            const results = provider.check( document.fileName, document.getText() );
+            if( results ){
+                const items = results.map( item=>{
+                    const range = item.range;
+                    return new vscode.Diagnostic(
+                        new vscode.Range( new vscode.Position( range.start.line-1, range.start.column ), new vscode.Position(range.end.line-1, range.end.column) ) ,
+                        `${item.message} (${item.code})`,
+                        item.kind,
+                    );
+                });
+                if( items.length > 0){
+                    collection.set(document.uri, items);
+                }else{
+                    collection.clear();
+                }
             }
+        }catch(e){
+            console.log( e )
         }
     }
 
@@ -196,5 +200,5 @@ exports.deactivate = function() {
         provider.clear();
     }
     provider = null;
-    delete provider;
+    //delete provider;
 };

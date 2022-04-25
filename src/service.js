@@ -1,12 +1,9 @@
+
 const path =  require("path");
-const fs =  require("fs");
-const Lib =  require("./lib");
-const {
-    Compiler,
-    Namespace,
-    Parser,
-    Utils
-} = Lib;
+const Compiler = require("../../easescript2/lib/core/Compiler");
+const Namespace = require("../../easescript2/lib/core/Namespace");
+const Parser = require("../../easescript2/lib/core/Parser");
+const Utils = require("../../easescript2/lib/core/Utils");
 const parseExpressionAt = Parser.Parser.parseExpressionAt;
 const defaultOptions = {
     service:true,
@@ -52,7 +49,6 @@ const MODULE_PROPERTY_ACCESSOR = 1
 const MODULE_PROPERTY_VAR = 2
 const MODULE_PROPERTY_METHOD = 4
 const MODULE_PROPERTY_CONST = 8
-
 class Service{
     constructor(options){
         if( options ){
@@ -61,8 +57,9 @@ class Service{
             options =  Object.assign({}, defaultOptions);
         }
         this._options =  options;
-        const workspaceFolders = options.workspaceFolders;
+        const workspaceFolders = options.cwd;
         const compiler = new Compiler( options );
+        compiler.globalPath = path.join(__dirname,'types')
         const types = compiler.scanTypings(workspaceFolders);
         compiler.loadTypes( types );
         this._types = types;
