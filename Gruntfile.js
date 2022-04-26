@@ -2,6 +2,16 @@ var uglify= require('rollup-plugin-uglify');
 var resolve = require( 'rollup-plugin-node-resolve' )
 var replace = require( 'rollup-plugin-replace' )
 var commonjs = require( 'rollup-plugin-commonjs' )
+var babel = require( 'rollup-plugin-babel');
+const banner = `/*
+ * <%= pkg.name %>
+ * Copyright © 2017 EaseScript All rights reserved.
+ * Released under the MIT license
+ * https://github.com/51breeze/es-grammar
+ * @author Jun Ye <664371281@qq.com>
+ * @date <%= grunt.template.today("yyyy-mm-dd") %>
+*/
+`;
 
 module.exports=function(grunt){
     grunt.initConfig({
@@ -23,6 +33,17 @@ module.exports=function(grunt){
                     commonjs({
                         ignore: ['conditional-runtime-dependency']
                     }),
+                    babel({
+                        exclude: 'node_modules/**',
+                        "presets": [
+                            [
+                              "@babel/env",
+                              {
+                                "modules": false
+                              }
+                            ]
+                        ]
+                    }),
                     replace({
                         'process.env.NODE_ENV': JSON.stringify('development'),
                         'process.env.VUE_ENV': JSON.stringify('browser')
@@ -41,7 +62,8 @@ module.exports=function(grunt){
         ,pkg: grunt.file.readJSON('package.json'),
         uglify: {
           options: {
-            banner: '/*! <%= pkg.name %> <%= grunt.template.today("yyyy-mm-dd") %> */\n'
+            banner:banner,
+            //beautify:true,
           },
           build: {
             src: './lib/extension.js',
@@ -52,5 +74,5 @@ module.exports=function(grunt){
     grunt.loadNpmTasks('grunt-contrib-copy');
     grunt.loadNpmTasks('grunt-rollup');
     grunt.loadNpmTasks('grunt-contrib-uglify');
-    grunt.registerTask('default', ['copy','rollup']);
+    grunt.registerTask('default', ['copy','rollup','uglify']);
 }
