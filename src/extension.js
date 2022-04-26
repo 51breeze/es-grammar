@@ -1,4 +1,4 @@
-const {exec} = require('child_process');
+//const {exec} = require('child_process');
 const vscode = require('vscode');
 const path = require('path');
 const Service = require('./service');
@@ -6,28 +6,27 @@ const Service = require('./service');
 const getOptions = ()=>{
     const config = vscode.workspace.getConfiguration('EaseScript');
     const LoadTypeFile = config.get('LoadTypeFile');
-    const SyntaxPlugins = config.get('SyntaxPlugins');
-    const builder = typeof SyntaxPlugins === 'string' ? SyntaxPlugins.split('|').map( name=>name.trim() ) : [];
-    const root = path.resolve(__dirname,'..');
+    //const SyntaxPlugins = config.get('SyntaxPlugins');
+    //const builder = typeof SyntaxPlugins === 'string' ? SyntaxPlugins.split('|').map( name=>name.trim() ) : [];
+    //const root = path.resolve(__dirname,'..');
     const workspaceFolders = vscode.workspace.workspaceFolders.map( item=>{
         return path.resolve( vscode.workspace.asRelativePath( item.uri, true ) );
     });
-    builder.forEach( name=>{
-        try{
-            require.resolve(name);
-        }catch(e){
-            exec(`npm install ${name}`, {cwd:root},(error)=>{
-                if( error ){
-                    vscode.window.showErrorMessage(error.message);
-                }
-            });
-        }
-    });
-    
+    // builder.forEach( name=>{
+    //     try{
+    //         require.resolve(name);
+    //     }catch(e){
+    //         exec(`npm install ${name}`, {cwd:root},(error)=>{
+    //             if( error ){
+    //                 vscode.window.showErrorMessage(error.message);
+    //             }
+    //         });
+    //     }
+    // });
     return{
         autoLoadDescribeFile:LoadTypeFile !== false,
         cwd:workspaceFolders[0],
-        builder
+        //builder
     };
 }
 
@@ -38,25 +37,21 @@ exports.activate = function(context) {
 
     function diagnostic(document) {
         if( document.languageId !== "easescript" )return;
-        try{
-            const results = provider.check( document.fileName, document.getText() );
-            if( results ){
-                const items = results.map( item=>{
-                    const range = item.range;
-                    return new vscode.Diagnostic(
-                        new vscode.Range( new vscode.Position( range.start.line-1, range.start.column ), new vscode.Position(range.end.line-1, range.end.column) ) ,
-                        `${item.message} (${item.code})`,
-                        item.kind,
-                    );
-                });
-                if( items.length > 0){
-                    collection.set(document.uri, items);
-                }else{
-                    collection.clear();
-                }
+        const results = provider.check( document.fileName, document.getText() );
+        if( results ){
+            const items = results.map( item=>{
+                const range = item.range;
+                return new vscode.Diagnostic(
+                    new vscode.Range( new vscode.Position( range.start.line-1, range.start.column ), new vscode.Position(range.end.line-1, range.end.column) ) ,
+                    `${item.message} (${item.code})`,
+                    item.kind,
+                );
+            });
+            if( items.length > 0){
+                collection.set(document.uri, items);
+            }else{
+                collection.clear();
             }
-        }catch(e){
-            console.log( e )
         }
     }
 

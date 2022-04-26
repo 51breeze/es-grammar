@@ -13,8 +13,7 @@
     ],
     "main": "./lib/extension",
     "scripts": {
-        "build": "grunt default --force",
-        "build:rollup": "rollup -c"
+        "build": "grunt default"
     },
     "activationEvents": [
         "onLanguage:easescript"
@@ -63,9 +62,6 @@
             }
         }
     },
-    "dependencies": {
-        "easescript": "*"
-    },
     "keywords": [
         "EaseScript",
         "es"
@@ -76,13 +72,10 @@
         "url": "git+https://github.com/51breeze/es-grammar.git"
     },
     "devDependencies": {
-        "@rollup/plugin-json": "^4.1.0",
         "grunt": "^1.4.1",
         "grunt-contrib-copy": "^1.0.0",
         "grunt-contrib-uglify": "^5.2.1",
         "grunt-rollup": "^11.9.0",
-        "install": "^0.13.0",
-        "npm": "^8.7.0",
         "rollup-plugin-commonjs": "^10.1.0",
         "rollup-plugin-node-resolve": "^5.2.0",
         "rollup-plugin-replace": "^2.2.0",

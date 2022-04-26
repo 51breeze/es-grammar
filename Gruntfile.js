@@ -31,7 +31,7 @@ module.exports=function(grunt){
                   ];
                 },
                 format: 'cjs',
-                external:[ 'child_process','vscode','path','fs','events','util','stream','os','buffer','memory-fs','colors'],
+                external:['vscode','path','fs','events','util'],
             },
             files:{
                 src:'./src/extension.js',
@@ -51,6 +51,6 @@ module.exports=function(grunt){
     });
     grunt.loadNpmTasks('grunt-contrib-copy');
     grunt.loadNpmTasks('grunt-rollup');
-    //grunt.loadNpmTasks('grunt-contrib-uglify');
+    grunt.loadNpmTasks('grunt-contrib-uglify');
     grunt.registerTask('default', ['copy','rollup']);
 }
