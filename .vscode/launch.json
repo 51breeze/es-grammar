@@ -13,7 +13,7 @@
                 "NODE_ENV":"development"
             },
             "args": [
-                "--extensionDevelopmentPath=${workspaceFolder}",
+                "--extensionDevelopmentPath=${workspaceFolder}/src",
             ]
         }
     ]

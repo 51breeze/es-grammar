@@ -1,5 +1,6 @@
 
 const path =  require("path");
+const fs =  require("fs");
 const Compiler = require("../../easescript2/lib/core/Compiler");
 const Namespace = require("../../easescript2/lib/core/Namespace");
 const Parser = require("../../easescript2/lib/core/Parser");
@@ -56,12 +57,14 @@ class Service{
         }else{
             options =  Object.assign({}, defaultOptions);
         }
+        options.globalTypes=[ path.join(__dirname,'types') ];
         this._options =  options;
         const workspaceFolders = options.cwd;
         const compiler = new Compiler( options );
-        compiler.globalPath = path.join(__dirname,'types')
         const types = compiler.scanTypings(workspaceFolders);
-        compiler.loadTypes( types );
+        if(types){
+            compiler.loadTypes( types );
+        }
         this._types = types;
         this._compiler = compiler;
     }
@@ -684,6 +687,45 @@ class Service{
         return results;
     }
 
+    getAttrDirectivesItems( jsxElement ){
+        let xmlns = jsxElement ? jsxElement.jsxRootElement.xmlns : [];
+        let options = this.compiler.options;
+        const resolveXmlns = {};
+        xmlns.forEach( attr=>{
+            const ns = attr.name.value();
+            const value = attr.value.value();
+            resolveXmlns[ value ]=ns;
+        });
+        for(var keyName in options.jsx.xmlns.default ){
+            var ns = options.jsx.xmlns.default[keyName];
+            if( !resolveXmlns[ns] ){
+                resolveXmlns[ ns ] = keyName;
+            }
+        }
+        const items = [];
+        for( var ns in resolveXmlns ){
+            const sections = options.jsx.xmlns.sections[ ns ];
+            if( sections ){
+                let def = resolveXmlns[ns];
+                sections.forEach( item=>{
+                    if(item=='*')item= 'name';
+                    let text = `${def}:${item}=""`;
+                    if( item ==='for'){
+                        text = `${def}:${item}="(item,key) in data"`
+                    }else if( item==='each' ){
+                        text = `${def}:${item}="item of data"`
+                    }
+                    items.push({
+                        text:`${def}:${item}`,
+                        insertText:text,
+                        kind:CompletionItemKind.Struct
+                    });
+                });
+            }
+        }
+        return items;
+    }
+
     getSpaceCompletionItems(compilation, lineText, startAt){
         let context = this.getProgramStackByLine(compilation.stack, startAt);
         if( !context )return [];
@@ -723,9 +765,9 @@ class Service{
                     }
                 }
             });
-            const xmlnsDefault = Object.keys( this.compiler.options.jsx.xmlns.default ).map( name=>{
-                return {text:name,kind:CompletionItemKind.Struct}
-            });
+
+            const xmlnsDefault = this.getAttrDirectivesItems( context.jsxElement )
+
             const properties = this.getModuleProperties(description, false, 4, excludes,MODULE_PROPERTY_VAR | MODULE_PROPERTY_ACCESSOR);
             properties.forEach( item=>{ 
                 if( item.defaultValue ){
@@ -806,6 +848,7 @@ class Service{
         }
 
         const components = new Map();
+        const resolveXmlns = {};
         let xmlns = jsxElement ? jsxElement.jsxRootElement.xmlns : [];
         if( xmlns && xmlns.length > 0 ){
 
@@ -831,10 +874,20 @@ class Service{
                     push(ns, object)
                 }
             }
-
+            const sections = compilation.compiler.options.jsx.xmlns.sections;
             xmlns.forEach( attr=>{
                 const ns = attr.name.value();
                 const value = attr.value.value();
+                if( value==='@directives'){
+                    const directives = sections[ value ];
+                    if( directives ){
+                        resolveXmlns[ ns ] = value;
+                        directives.forEach( item=>{
+                            push(ns, item);
+                        })
+                    }
+                }
+
                 const object = Namespace.fetch( value );
                 if( object ){
                     getModule( ns , object)
@@ -844,12 +897,36 @@ class Service{
 
         components.forEach( (value,ns)=>{
             value.forEach( module=>{
-                importRefs.push({
-                    text:module.getName(),
-                    kind:CompletionItemKind.Class,
-                    insertText:`${ns}:${module.id}></${ns}:${module.id}>`,
-                    stack:compilation.getStackByModule(module)
-                })
+                if( resolveXmlns[ ns ] ==="@directives"){
+                    let text = module;
+                    let insertText = '';
+                    if( text==='if' || text==='elseif' || text==='show'){
+                        insertText = `${ns}:${text} condition=""></${ns}:${text}>`;
+                    }
+                    else if( text==='else' ){
+                        insertText = `${ns}:${text}></${ns}:${text}>`;
+                    }
+                    else if( text==='for' || text==='each' ){
+                        insertText = `${ns}:${text} name="" item="item" key="key"></${ns}:${text}>`;
+                    }else if( text==='each' ){
+                        insertText = `${ns}:${text} name="" item="item" key="key"></${ns}:${text}>`;
+                    }
+                    if( insertText ){
+                        importRefs.push({
+                            text:text,
+                            kind:CompletionItemKind.Struct,
+                            insertText:insertText,
+                        });
+                    }
+
+                }else{
+                    importRefs.push({
+                        text:module.getName(),
+                        kind:CompletionItemKind.Class,
+                        insertText:`${ns}:${module.id}></${ns}:${module.id}>`,
+                        stack:compilation.getStackByModule(module)
+                    });
+                }
             })
         });
 
