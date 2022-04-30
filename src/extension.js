@@ -114,10 +114,16 @@ exports.activate = function(context) {
             const result = provider.hover(fileName,start, word);
             if( result ){
                 const mark = new vscode.MarkdownString();
-                mark.appendCodeblock( result.expre );
-                if( result.comments ){
+                mark.appendCodeblock( result.text );
+                if( result.comments && result.comments.length>0 ){
                     mark.appendMarkdown("***");
-                    mark.appendCodeblock( result.comments.map( item=>item.value ).join("  ") );
+                    let comments = result.comments;
+                    comments = comments.map( item=>{
+                        return item.replace(/(\@\w+)/i, (a,b)=>{
+                            return `*${b}*`;
+                        });
+                    })
+                    mark.appendMarkdown( '\r\n'+comments.join('\r\n\r\n') );
                 }
                 let range = null;
                 if( result.range ){

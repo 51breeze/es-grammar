@@ -110,15 +110,11 @@ class Service{
 
     comments(result){
         if( result && result.comments ){
-            result.comments.forEach( item=>{
-                if( item.type=="Block" ){
-                    item.value = item.value.split(/\r\n/g).map( val=>val.replace(/^(\s+|\t+)?\*?/g,"") ).filter( val=>!!val).join("\r\n");
-                }else{
-                    //item.value = item.value.split(/^(\s+|\t+)?([\/]+)/g);
-                }
-            });
+            return result.comments.filter(item=>item.type=="Block").map( item=>{
+                return item.value.split(/\r\n/g).map( val=>val.replace(/^(\s+|\t+)?\*?/g,"") ).filter( val=>!!val);
+            }).flat();
         }
-        return result;
+        return null;
     }
 
     getStackByAt(file,startAt,tryNum=20, both=0){
@@ -1070,9 +1066,12 @@ class Service{
 
                 const result = stack.definition();
                 if( result  ){
-                    this.comments(result);
+                    return {
+                        text:result.expre, 
+                        comments:this.comments(result)
+                    };
                 }
-                return result;
+                return null;
             }
         }catch(e){
             if( this.options.debug ){
