@@ -1052,8 +1052,22 @@ class Service{
     hover(file, startAt, line, character, word){
         try{
             const compilation = this.parser(file);
-            const stack = this.getProgramStackByLine( compilation.stack , startAt )
+            let stack = this.getProgramStackByLine( compilation.stack , startAt )
             if( stack ){
+                
+                if( stack.isIdentifier && stack.scope.type('class') ){
+                    stack = stack.getParentStack( stack=>!!stack.isPropertyDefinition ) || stack;
+                }
+
+                if( stack.isProgram || 
+                    stack.isPackageDeclaration || 
+                    stack.isClassDeclaration || 
+                    stack.isDeclaratorDeclaration || 
+                    stack.isEnumDeclaration || 
+                    stack.isInterfaceDeclaration ){
+                    return null;
+                }
+
                 const result = stack.definition();
                 if( result  ){
                     this.comments(result);
