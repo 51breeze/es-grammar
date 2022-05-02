@@ -1,7 +1,7 @@
 declare Object{
    static assign(target:object,...value:object[]):object;
-   static values(value:object):Iterator;
-   static keys(value:object):Iterator;
+   static values(value:object):Iterator<any>;
+   static keys(value:object):Iterator<string>;
 
    @Callable
    constructor(value?:any);
@@ -34,9 +34,15 @@ declare Object{
    propertyIsEnumerable(v:string | number): boolean;
 }
 
-declare interface Iterator{
-   next():{value:any,key?:string|number,done:boolean};
+declare interface Iterator<T>{
+   next():IteratorReturnResult<T>;
    rewind(): void;
+}
+
+declare interface IteratorReturnResult<T>{
+   done: boolean,
+   value: T,
+   key?:string|number
 }
 
 declare interface RegExpMatchArray extends Array<string> {
@@ -49,13 +55,13 @@ declare interface RegExpExecArray extends Array<string> {
    var input: string;
 }
 
-declare Array<T> implements Iterator{
+declare Array<T> implements Iterator<T>{
 
    /**
    * Creates an array from an array-like object.
    * @param arrayLike An array-like object to convert to an array.
    */
-   static from<T,U>(target:Iterator,callback?:(value:T,key:number)=>U):U[];
+   static from<T,U>(target:Iterator<any>,callback?:(value:T,key:number)=>U):U[];
 
    /**
    * Returns a new array from a set of elements.
@@ -469,7 +475,7 @@ package Intl {
     }
 }
 
-declare String implements Iterator{
+declare String implements Iterator<string>{
 
    static fromCharCode(...codes: number[]): string;
 
@@ -1079,7 +1085,6 @@ declare DataView {
     setUint32(byteOffset: number, value: number, littleEndian?: boolean): void;
 }
 
-
 declare class Map<K,V>{
    constructor(entries?:[K,V][] | null):Map<K, V>;
    clear(): void;
@@ -1088,6 +1093,21 @@ declare class Map<K,V>{
    get(key: K): V | null;
    has(key: K): boolean;
    set(key: K, value: V): this;
+
+   /**
+   * Returns an iterable of keys in the map
+   */
+   keys():Iterator<K>;
+
+   /**
+   * Returns an iterable of values in the map
+   */
+   values():Iterator<V>;
+
+   /**
+   * Returns an iterable of key, value pairs for every entry in the map.
+   */
+   entries(): Iterator<[K, V]>;
    const size:number;
 }
 
@@ -1099,6 +1119,22 @@ declare class Set<T>{
    delete(value: T): boolean;
    forEach(callbackfn: (value: T, value2: T, set: Set<T>) => void, thisArg?: any): void;
    has(value: T): boolean;
+
+   /**
+     * Returns an iterable of [v,v] pairs for every value `v` in the set.
+     */
+   entries(): Iterator<[T, T]>;
+
+    /**
+     * Despite its name, returns an iterable of the values in the set.
+     */
+   keys(): Iterator<T>;
+
+    /**
+     * Returns an iterable of values in the set.
+     */
+   values(): Iterator<T>;
+
    const size: number;
 }
 

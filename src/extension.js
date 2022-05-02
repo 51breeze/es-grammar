@@ -31,10 +31,8 @@ const getOptions = ()=>{
 }
 
 exports.activate = function(context) {
-
     const provider =  new Service( getOptions() );
     const collection = vscode.languages.createDiagnosticCollection("easescript");
-
     function diagnostic(document) {
         if( document.languageId !== "easescript" )return;
         const results = provider.check( document.fileName, document.getText() );

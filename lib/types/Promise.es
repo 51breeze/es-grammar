@@ -8,7 +8,7 @@ package{
         * @param values An iterable of Promises.
         * @returns A new Promise.
         */
-        static all<T>(values: Iterator): Promise<T[]>;
+        static all<T>(values: Iterator<any>): Promise<T[]>;
 
         /**
         * Creates a Promise that is resolved or rejected when any of the provided Promises are resolved
@@ -16,7 +16,7 @@ package{
         * @param values An iterable of Promises.
         * @returns A new Promise.
         */
-        static race<T>(values: Iterator): Promise<T>;
+        static race<T>(values: Iterator<any>): Promise<T>;
 
          /**
         * Creates a Promise that is resolved with an array of results when all
@@ -24,7 +24,7 @@ package{
         * @param values An array of Promises.
         * @returns A new Promise.
         */
-        static allSettled<T>(values:Iterator): Promise<T[]>;
+        static allSettled<T>(values:Iterator<any>): Promise<T[]>;
 
         /**
         * Creates a new rejected promise for the provided reason.
