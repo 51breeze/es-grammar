@@ -61,7 +61,7 @@ declare Array<T> implements Iterator<T>{
    * Creates an array from an array-like object.
    * @param arrayLike An array-like object to convert to an array.
    */
-   static from<T,U>(target:Iterator<any>,callback?:(value:T,key:number)=>U):U[];
+   static from<T,U=T>(target:Iterator<T>,callback?:(value:T,key:number)=>U):U[];
 
    /**
    * Returns a new array from a set of elements.
@@ -228,20 +228,20 @@ declare Array<T> implements Iterator<T>{
      */
     reduceRight(callbackfn: (previousValue: T, currentValue: T, currentIndex?: number, array?: T[]) => T, initialValue?: T): T;
 
-     /**
+    /**
      * Returns an iterable of key, value pairs for every entry in the array
      */
-    entries():[ [number, T] ];
+    entries(): Iterator<[number, T]>;
 
     /**
      * Returns an iterable of keys in the array
      */
-    keys():number[];
+    keys(): Iterator<number>;
 
     /**
      * Returns an iterable of values in the array
      */
-    values():T[];
+    values(): Iterator<T>;
 
      /**
      * Returns the value of the first element in the array where predicate is true, and undefined
