@@ -145,7 +145,14 @@ exports.activate = function(context) {
             const result = provider.definition(fileName, start, word);
             if (result && result.location && result.file) {
                 const location = result.location;
-                return new vscode.Location(vscode.Uri.file(result.file), new vscode.Position(location.start.line-1, location.start.column));
+                const obj = new vscode.Location(vscode.Uri.file(result.file), new vscode.Position(location.start.line-1, location.start.column) );
+                if( result.range ){
+                    obj.originSelectionRange = new vscode.Range( 
+                        new vscode.Position( result.range.start.line-1, result.range.start.column),
+                        new vscode.Position( result.range.end.line-1, result.range.end.column)
+                    );
+                }
+                return obj;
             }
         }
     }));

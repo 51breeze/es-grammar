@@ -1058,7 +1058,6 @@ class Service{
                 if( stack.isIdentifier && stack.scope.type('class') ){
                     stack = stack.getParentStack( stack=>!!stack.isPropertyDefinition ) || stack;
                 }
-                
                 if( stack.isProgram || 
                     stack.isPackageDeclaration || 
                     stack.isClassDeclaration || 
@@ -1071,7 +1070,9 @@ class Service{
                 const result = stack.definition();
                 if( result  ){
                     return {
-                        text:result.expre, 
+                        text:result.text || result.expre, 
+                        range:result.range,
+                        location:result.location,
                         comments:this.comments(result)
                     };
                 }
@@ -1092,7 +1093,7 @@ class Service{
             const stack = this.getProgramStackByLine( compilation.stack , startAt )
             if( stack ){
                 const result = stack.definition();
-                if( result && !result.location  ){
+                if( result && !result.location ){
                     return null;
                 }
                 return result;
