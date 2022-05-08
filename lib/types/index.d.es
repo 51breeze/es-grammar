@@ -252,7 +252,7 @@ declare Array<T> implements Iterator<T>{
      * @param thisArg If provided, it will be used as the this value for each invocation of
      * predicate. If it is not provided, undefined is used instead.
      */
-    find(predicate: (value: T, index?: number, obj?: T[]) => T, thisArg?: any): T;
+    find(predicate: (value: T, index?: number, obj?: T[]) => boolean, thisArg?: any): T;
 
     /**
      * Returns the index of the first element in the array where predicate is true, and -1

@@ -60,13 +60,17 @@ class Service{
         options.globalTypes=[ path.join(__dirname,'types') ];
         this._options =  options;
         const workspaceFolders = options.cwd;
-        const compiler = new Compiler( options );
-        const types = compiler.scanTypings(workspaceFolders);
-        if(types){
-            compiler.loadTypes( types );
+        try{
+            const compiler = new Compiler( options );
+            const types = compiler.scanTypings(workspaceFolders);
+            if(types){
+                compiler.loadTypes( types );
+            }
+            this._types = types;
+            this._compiler = compiler;
+        }catch(e){
+            console.error(e);
         }
-        this._types = types;
-        this._compiler = compiler;
     }
 
     set options( value ){
@@ -1041,6 +1045,7 @@ class Service{
                 return compilation.errors;
             }    
         }catch(e){
+            console.log(e)
         }
         return errors;
     }
@@ -1050,11 +1055,10 @@ class Service{
             const compilation = this.parser(file);
             let stack = this.getProgramStackByLine( compilation.stack , startAt )
             if( stack ){
-                
                 if( stack.isIdentifier && stack.scope.type('class') ){
                     stack = stack.getParentStack( stack=>!!stack.isPropertyDefinition ) || stack;
                 }
-
+                
                 if( stack.isProgram || 
                     stack.isPackageDeclaration || 
                     stack.isClassDeclaration || 
