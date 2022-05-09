@@ -105,7 +105,7 @@ declare Array<T> implements Iterator<T>{
      * This method returns a new array without modifying any existing arrays.
      * @param items Additional arrays and/or items to add to the end of the array.
      */
-    concat(...items: T[]): T[];
+    concat(...items: (T | T[])[]): T[];
     /**
      * Adds all the elements of an array into a string, separated by the specified separator string.
      * @param separator A string used to separate one element of the array from the next in the resulting string. If omitted, the array elements are separated with a comma.
