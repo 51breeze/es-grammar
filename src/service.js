@@ -1055,12 +1055,11 @@ class Service{
             const compilation = this.parser(file);
             let stack = this.getProgramStackByLine( compilation.stack , startAt )
             if( stack ){
-                if( stack.isIdentifier && stack.scope.type('class') ){
-                    stack = stack.getParentStack( stack=>!!stack.isPropertyDefinition ) || stack;
-                }
+
                 if( stack.isProgram || 
                     stack.isPackageDeclaration || 
                     stack.isClassDeclaration || 
+                    stack.isPropertyDefinition || 
                     stack.isDeclaratorDeclaration || 
                     stack.isEnumDeclaration || 
                     stack.isInterfaceDeclaration ){
@@ -1092,6 +1091,17 @@ class Service{
             const compilation = this.parser(file);
             const stack = this.getProgramStackByLine( compilation.stack , startAt )
             if( stack ){
+                
+                if( stack.isProgram || 
+                    stack.isPackageDeclaration || 
+                    stack.isClassDeclaration || 
+                    stack.isPropertyDefinition || 
+                    stack.isDeclaratorDeclaration || 
+                    stack.isEnumDeclaration || 
+                    stack.isInterfaceDeclaration ){
+                    return null;
+                }
+
                 const result = stack.definition();
                 if( result && !result.location ){
                     return null;
