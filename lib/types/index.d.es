@@ -907,7 +907,7 @@ declare Function {
      * @param thisArg An object to which the this keyword can refer inside the new function.
      * @param argArray A list of arguments to be passed to the new function.
      */
-    bind(thisArg: any, ...args): any;
+    bind(thisArg: any, ...args): this;
 
     /** Returns a string representation of a function. */
     toString(): string;
