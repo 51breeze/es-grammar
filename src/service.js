@@ -730,6 +730,9 @@ class Service{
         let context = this.getProgramStackByLine(compilation.stack, startAt);
         if( !context )return [];
 
+
+        console.log( context.jsxElement.type().toString() )
+
         if( (context.isJSXExpressionContainer || 
             (context.isLiteral && context.parentStack && context.parentStack.isJSXAttribute)) &&
             !this.inPosition(context,startAt) ){
