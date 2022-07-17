@@ -8,13 +8,14 @@ const Utils = require("../../easescript2/lib/core/Utils");
 const parseExpressionAt = Parser.Parser.parseExpressionAt;
 const defaultOptions = {
     service:true,
-    debug:true,
+    debug: process.env.NODE_ENV === 'development',
     autoLoadDescribeFile:false,
     parser:{
         locations:true
     },
     diagnose:true
 };
+
 const CompletionItemKind ={
     Text:0,
     Method:1,
@@ -353,26 +354,6 @@ class Service{
         return stack;
     }
 
-    // getLastStackByAt(stack, startAt){
-    //     if( !stack )return null;
-    //     const node = stack.node;
-    //     if( !(stack.isVariableDeclarator || stack.isAssignmentExpression || stack.isExpressionStatement || stack.isBinaryExpression) ){
-    //         if(node && node.end+1 == startAt ){
-    //             return stack;
-    //         }
-    //     }
-    //     const body = this.getStackSpreadItems(stack);
-    //     let len = body.length;
-    //     while( len > 0 ){
-    //         const expr = body[ --len ];
-    //         const result = this.getLastStackByAt(expr, startAt);
-    //         if( result ){
-    //             return result;
-    //         }
-    //     }
-    //     return null;
-    // }
-
     getGlobalRefs(compilation){
         const globals = [];
         Namespace.dataset.modules.forEach( (item,name)=>{
@@ -484,11 +465,11 @@ class Service{
         }else{
             every(typeModule.members);
             if( typeModule.inherit ){
-                properties = properties.concat(this.getModuleProperties( typeModule.inherit, isStatic, 1 ^ ns, excludes, mode) );
+                properties = properties.concat( this.getModuleProperties( typeModule.inherit, isStatic, 1 ^ ns, excludes, mode) );
             }
-            if( typeModule.isDeclaratorModule ){
+            if( typeModule ){
                 typeModule.implements.forEach(impModule=>{
-                    properties = properties.concat(this.getModuleProperties( impModule, isStatic, 1 ^ ns, excludes, mode) );
+                    properties = properties.concat( this.getModuleProperties( impModule, isStatic, 1 ^ ns, excludes, mode) );
                 });
             }
         }
@@ -517,11 +498,18 @@ class Service{
 
     getLocalScopeRefs(context){
         if( !context || !context.isStack )return [];
+        const localScopeRefs = this._localScopeRefs || (this._localScopeRefs = new Map());
         const scope   = context.scope;
-        const varKeys = scope && scope.getKeys(["block","function"]).map( name=>{
+        if( localScopeRefs.has(scope) ){
+            return localScopeRefs.get( scope );
+        }
+        const varKeys = []
+        scope && scope.getKeys(["block","function"]).forEach( name=>{
             const token = scope.define(name);
-            const kind = token && token.isStack && token.kind==="const" ? CompletionItemKind.Constant : CompletionItemKind.Variable;
-            return {text:name,kind:kind,stack:token && token.isStack ? token : null};
+            if( token !== scope && token.isStack ){
+                const kind = token && token.isStack && token.kind==="const" ? CompletionItemKind.Constant : CompletionItemKind.Variable;
+                varKeys.push({text:name,kind:kind,stack:token && token.isStack ? token : null});
+            }
         });
         const items = [];
         if( context.module && context.module.inherit ){
@@ -529,10 +517,22 @@ class Service{
             if( pStack.isBlockStatement && pStack.parentStack.isFunctionExpression && pStack.parentStack.parentStack.isMethodDefinition ){
                 if( !pStack.parentStack.parentStack.static){
                     items.push({text:"super", kind:CompletionItemKind.Constant});
-                } 
+                }
             }
         }
+        localScopeRefs.set(scope, varKeys);
         return varKeys;
+    }
+
+    getStatementKeywords(){
+        if( this._keywords ){
+            return this._keywords;
+        }
+        this._keywords = ['class','extends','implements','super','this','return','continue','function','break','case','default',
+        'switch','if','else','else if','for','try','catch','finally','do','while','var','const','let','throw','delete'].map( name=>{
+            return {text:name, kind:CompletionItemKind.Keyword}
+        });
+        return this._keywords;
     }
 
     getDotCompletionItems(compilation, lineText, startAt){
@@ -729,10 +729,6 @@ class Service{
     getSpaceCompletionItems(compilation, lineText, startAt){
         let context = this.getProgramStackByLine(compilation.stack, startAt);
         if( !context )return [];
-
-
-        console.log( context.jsxElement.type().toString() )
-
         if( (context.isJSXExpressionContainer || 
             (context.isLiteral && context.parentStack && context.parentStack.isJSXAttribute)) &&
             !this.inPosition(context,startAt) ){
@@ -964,7 +960,8 @@ class Service{
                             return {text:name,kind:CompletionItemKind.Keyword}
                         });
                     }
-                    return this.getModuleImportRefs(compilation, context.module).concat( this.getGlobalRefs(compilation), this.getLocalScopeRefs(context) );
+                   
+                    return this.getModuleImportRefs(compilation, context.module).concat( this.getGlobalRefs(compilation), this.getLocalScopeRefs(context), this.getStatementKeywords() );
                 }
             }else if( triggerKind == ' ' ){
                 return this.getSpaceCompletionItems( compilation, lineText, startAt )

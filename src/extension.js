@@ -40,7 +40,7 @@ exports.activate = function(context) {
             const items = results.map( item=>{
                 const range = item.range;
                 return new vscode.Diagnostic(
-                    new vscode.Range( new vscode.Position( range.start.line-1, range.start.column ), new vscode.Position(range.end.line-1, range.end.column) ) ,
+                    new vscode.Range( new vscode.Position( range.start.line-1, range.start.column), new vscode.Position(range.end.line-1, range.end.column) ) ,
                     `${item.message} (${item.code})`,
                     item.kind,
                 );

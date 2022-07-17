@@ -10,7 +10,7 @@
     "categories": [
         "Programming Languages"
     ],
-    "main": "./extension",
+    "main": "./index",
     "activationEvents": [
         "onLanguage:easescript"
     ],
