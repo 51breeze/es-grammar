@@ -135,172 +135,10 @@ class Service{
         return null;
     }
 
-    getStackSpreadItems(stack){
-        let body = [];
-        if( !stack )return body;
-        switch( true ){
-            case stack.isFunctionExpression :
-            case stack.isArrowFunctionExpression :
-            case stack.isFunctionDeclaration :
-            case stack.isMethodDefinition :
-               return [].concat(stack.params, stack.returnType, stack.body);
-
-            case stack.isPackageDeclaration :
-                return stack.childStackItems.concat( stack.id );
-                
-            case stack.isClassDeclaration :
-            case stack.isDeclaratorDeclaration :
-            case stack.isInterfaceDeclaration :
-                return stack.childStackItems.concat(stack.id,stack.inherit,stack.genericity,stack.annotations,stack.implements);
-
-            case stack.isProgram :
-                return stack.childStackItems;
-
-            case stack.isAnnotationDeclaration :
-            case stack.isAnnotationExpression :
-                return stack.body;
-
-            case stack.isEnumDeclaration :
-                return [stack.key,stack.inherit].concat(stack.imports,stack.annotations,stack.properties);
-
-            case stack.isPropertyDefinition :
-            case stack.isVariableDeclaration :
-                return stack.declarations.concat( stack.annotations );
-
-            case stack.isAssignmentExpression :
-            case stack.isLogicalExpression :
-                return [stack.left,stack.right];
-
-            case stack.isAssignmentPattern :
-                return [stack.left,stack.acceptType,stack.right];
-
-            case stack.isVariableDeclarator :
-            case stack.isDeclarator :
-            case stack.isParamDeclarator :
-                return [stack.id,stack.acceptType,stack.init];
-
-            case stack.isArrayExpression :
-                return stack.elements;
-
-            case stack.isObjectExpression :
-                return stack.properties;
-
-            case stack.isProperty :
-                return [stack.key,stack.acceptType,stack.init];
-
-            case stack.isBinaryExpression :
-                return [stack.left, stack.right];
-
-            case stack.isAwaitExpression :
-            case stack.isReturnStatement :
-            case stack.isThrowStatement :
-                return [stack.argument];
-
-            case stack.isObjectPattern :
-                return stack.properties;
-
-            case stack.isExpressionStatement :
-            case stack.isParenthesizedExpression :
-                return [stack.expression];
-
-            case stack.isSequenceExpression :
-                return stack.expressions;    
-
-            case stack.isMemberExpression :
-            case stack.isTypeComputeDefinition :
-                return [stack.object,stack.property];
-
-            case stack.isImportDeclaration :
-                return [stack.specifiers];
-
-            case stack.isNewExpression :
-            case stack.isCallExpression :
-                return [stack.callee].concat( stack.genericity, stack.arguments );
-
-            case stack.isTypeFunctionDefinition :
-                return stack.params.concat( stack.returnType );
-
-            case stack.isGenericDeclaration :
-            case stack.isTypeUnionDefinition :
-                return stack.elements;
-
-            case stack.isGenericTypeDeclaration :
-                return [stack.valueType,stack.extends];
-
-            case stack.isGenericTypeAssignmentDeclaration :
-            case stack.isTypeAssertExpression :
-            case stack.isTypeIntersectionDefinition :
-                return [stack.left,stack.right];
-
-            case stack.isTypeGenericDefinition :
-                return [stack.valueType].concat(stack.elements);
-
-            case stack.isTypeKeyofDefinition :
-            case stack.isTypeTupleRestDefinition :
-            case stack.isTypeDefinition :
-                return [stack.valueType];
-
-            case stack.isTypeObjectDefinition :
-                return stack.properties;
-
-            case stack.isTypeObjectPropertyDefinition :
-                return [stack.key,stack.init];
-
-            case stack.isTypeStatement :
-                return [stack.id,stack.init];
-
-            case stack.isTypeTypeofDefinition :
-                return [stack.expression];
-
-            case stack.isTypeTransformExpression :
-                return [stack.typeExpression,stack.referExpression];
-
-            case stack.isTypeTupleDefinition :
-                return stack.elements;
-
-            case stack.isIfStatement :
-            case stack.isWhenStatement :
-                return [stack.consequent,stack.alternate];
-
-            case stack.isJSXElement :
-                return [stack.openingElement].concat(stack.children);
-
-            case stack.isJSXScript :
-                return [stack.openingElement].concat(stack.imports, stack.body);
-
-            case stack.isJSXStyle :
-                return [stack.openingElement];
-
-            case stack.isJSXAttribute :
-                return [stack.name,stack.value]
-
-            case stack.isJSXExpressionContainer :
-                return [stack.expression]
-
-            case stack.isJSXOpeningElement :
-                return stack.attributes || [];
-
-            case stack.isBlockStatement  :
-                return stack.body;
-
-            case stack.isSwitchStatement  :
-                return [stack.condition].concat( stack.cases )
-
-            case stack.isSwitchCase  :
-                if( stack.condition ){
-                    body.push( stack.condition )
-                }
-                if( stack.consequent ){
-                    body.push( stack.consequent )
-                }
-                return body;
-        }
-        return body;
-    }
-
     getContainStackByAt( stack, startAt ){
         const node = stack && stack.node;
-        if(node && node.start <= startAt && node.end >= startAt ){
+        const inRange = node && node.start <= startAt && node.end >= startAt;
+        if( inRange || stack.isDeclarator ){
             const body = stack.childrenStack
             let len = body && body.length;
             while( len > 0 ){
@@ -310,7 +148,7 @@ class Service{
                     return result;
                 }
             }
-            return stack;
+            if(inRange)return stack;
         }
         return null;
     }
@@ -528,8 +366,13 @@ class Service{
         if( this._keywords ){
             return this._keywords;
         }
-        this._keywords = ['class','extends','implements','super','this','return','continue','function','break','case','default',
-        'switch','if','else','else if','for','try','catch','finally','do','while','var','const','let','throw','delete'].map( name=>{
+        this._keywords = [
+            'class','extends','implements','super','this','return',
+            'continue','function','break','case','default','switch',
+            'if','else','else if','for','try','catch','finally',
+            'do','while','var','const','let','throw','delete','null',
+            'false','true','NaN'
+        ].map( name=>{
             return {text:name, kind:CompletionItemKind.Keyword}
         });
         return this._keywords;
