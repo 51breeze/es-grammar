@@ -23,9 +23,16 @@ const getOptions = ()=>{
     //         });
     //     }
     // });
+    
+    var globalTypes = void 0;
+    if( process.env.NODE_ENV !== 'development' ){
+        globalTypes = [path.resolve(__dirname,'typing')]
+    }
+
     return{
         autoLoadDescribeFile:LoadTypeFile !== false,
         cwd:workspaceFolders[0],
+        globalTypes:globalTypes
         //builder
     };
 }

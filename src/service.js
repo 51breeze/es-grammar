@@ -62,13 +62,13 @@ class Service{
         this._options =  options;
         const workspaceFolders = options.cwd;
         try{
-            const compiler = new Compiler( options );
+            const compiler = this._compiler = new Compiler( options );
+            compiler.initialize();
             const types = compiler.scanTypings(workspaceFolders);
             if(types){
                 compiler.loadTypes( types );
             }
             this._types = types;
-            this._compiler = compiler;
         }catch(e){
             console.error(e);
         }

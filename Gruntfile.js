@@ -19,7 +19,7 @@ module.exports=function(grunt){
             main: {
                 files: [
                     {expand: true, cwd: 'src/syntaxes', src: ['**'], dest: 'lib/syntaxes/',filter: 'isFile'},
-                    {expand: true, cwd: '../easescript2/lib/globals', src: ['**'], dest: 'lib/types',filter: 'isFile'},
+                    {expand: true, cwd: '../easescript2/lib/typing', src: ['**'], dest: 'lib/typing',filter: 'isFile'},
                 ],
             },
         },
@@ -74,5 +74,9 @@ module.exports=function(grunt){
     grunt.loadNpmTasks('grunt-contrib-copy');
     grunt.loadNpmTasks('grunt-rollup');
     grunt.loadNpmTasks('grunt-contrib-uglify');
-    grunt.registerTask('default', ['copy','rollup','uglify']);
+    grunt.registerTask('default', [
+      'copy',
+      'rollup',
+      'uglify'
+    ]);
 }

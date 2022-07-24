@@ -307,7 +307,7 @@ declare Array<T> implements Iterator<T>{
     copyWithin(target: number, start: number, end?: number): T[];
 }
 
-declare Number {
+declare class Number {
 
    const MAX_VALUE:number = 1.79E+308;
    const MIN_VALUE:number = 5e-324;
@@ -354,7 +354,7 @@ declare Number {
     valueOf(): number;
 }
 
-declare Math{
+declare class Math{
 
    /** The mathematical constant e. This is Euler's number, the base of natural logarithms. */
     const E: number;
@@ -475,7 +475,7 @@ package Intl {
     }
 }
 
-declare String implements Iterator<string>{
+declare class String implements Iterator<string>{
 
    static fromCharCode(...codes: number[]): string;
 
@@ -641,7 +641,7 @@ declare String implements Iterator<string>{
     padEnd(maxLength: number, fillString?: string): string;
 }
 
-declare RegExp{
+declare class RegExp{
    constructor( fromat:string );
 
    /**
@@ -672,7 +672,7 @@ declare RegExp{
 }
 
 
-declare Date {
+declare class Date {
 
    /**
      * Parses a string containing a date, and returns the number of milliseconds between that date and midnight, January 1, 1970.
@@ -846,21 +846,21 @@ declare Date {
     toJSON(key?: any): string;
 }
 
-declare Error{
+declare class Error{
    const name: string;
    const message: string;
    const stack:string=null;
    constructor( message:string );
 }
 
-declare EvalError extends Error {}
-declare RangeError extends Error {}
-declare ReferenceError extends Error {}
-declare SyntaxError extends Error {}
-declare TypeError extends Error {}
-declare URIError extends Error {}
+declare class EvalError extends Error {}
+declare class RangeError extends Error {}
+declare class ReferenceError extends Error {}
+declare class SyntaxError extends Error {}
+declare class TypeError extends Error {}
+declare class URIError extends Error {}
 
-declare JSON {
+declare class JSON {
     /**
      * Converts a JavaScript Object Notation (JSON) string into an object.
      * @param text A valid JSON string.
@@ -878,7 +878,7 @@ declare JSON {
     static stringify(value: any, replacer?: (number | string)[] | (key: string, value: any) => any, space?: string | number): string;
 }
 
-declare Function {
+declare class Function {
 
    /**
      * Creates a new function.
@@ -914,35 +914,79 @@ declare Function {
 }
 
 
+declare interface ArrayLike<T> {
+    const length: number;
+    const [n: number]: T;
+}
+
 /**
  * Represents a raw buffer of binary data, which is used to store data for the
  * different typed arrays. ArrayBuffers cannot be read from or written to directly,
  * but can be passed to a typed array or DataView Object to interpret the raw
  * buffer as needed.
  */
-declare ArrayBuffer {
-
-    static isView(arg: any): boolean;
-
+declare class ArrayBuffer {
     /**
      * Read-only. The length of the ArrayBuffer (in bytes).
      */
     const byteLength: number;
 
-    constructor(byteLength: number);
-
     /**
      * Returns a section of an ArrayBuffer.
      */
     slice(begin: number, end?: number): ArrayBuffer;
+
+    static isView(arg: any): boolean;
 }
 
-declare ArrayBufferView {
+declare class SharedArrayBuffer {
+    /**
+     * Read-only. The length of the ArrayBuffer (in bytes).
+     */
+    const byteLength: number;
+
+    /**
+     * Returns a section of an SharedArrayBuffer.
+     */
+    slice(begin: number, end?: number): SharedArrayBuffer;
+
+    static  isView(arg: any): boolean;
+}
+
+
+declare interface ArrayBufferView {
     /**
      * The ArrayBuffer instance referenced by the array.
      */
-    const buffer: ArrayBuffer;
+    buffer: ArrayBuffer | SharedArrayBuffer;
 
+    /**
+     * The length in bytes of the array.
+     */
+    byteLength: number;
+
+    /**
+     * The offset in bytes of the array.
+     */
+    byteOffset: number;
+}
+
+
+/**
+ * A typed array of 8-bit integer values. The contents are initialized to 0. If the requested
+ * number of bytes could not be allocated an exception is raised.
+ */
+declare interface TypeArrayInterface<T> {
+    /**
+     * The size in bytes of each element in the array.
+     */
+    const BYTES_PER_ELEMENT: number;
+
+    /**
+     * The ArrayBuffer instance referenced by the array.
+     */
+    const buffer: ArrayBuffer | SharedArrayBuffer;
+    
     /**
      * The length in bytes of the array.
      */
@@ -952,9 +996,301 @@ declare ArrayBufferView {
      * The offset in bytes of the array.
      */
     const byteOffset: number;
+
+    /**
+     * Returns the this object after copying a section of the array identified by start and end
+     * to the same array starting at position target
+     * @param target If target is negative, it is treated as length+target where length is the
+     * length of the array.
+     * @param start If start is negative, it is treated as length+start. If end is negative, it
+     * is treated as length+end.
+     * @param end If not specified, length of the this object is used as its default value.
+     */
+    copyWithin(target: number, start: number, end?: number): this;
+
+    /**
+     * Determines whether all the members of an array satisfy the specified test.
+     * @param predicate A function that accepts up to three arguments. The every method calls
+     * the predicate function for each element in the array until the predicate returns a value
+     * which is coercible to the Boolean value false, or until the end of the array.
+     * @param thisArg An object to which the this keyword can refer in the predicate function.
+     * If thisArg is omitted, undefined is used as the this value.
+     */
+    every(predicate: (value: number, index: number, array: T) => boolean, thisArg?: any): boolean;
+
+    /**
+     * Changes all array elements from `start` to `end` index to a static `value` and returns the modified array
+     * @param value value to fill array section with
+     * @param start index to start filling the array at. If start is negative, it is treated as
+     * length+start where length is the length of the array.
+     * @param end index to stop filling the array at. If end is negative, it is treated as
+     * length+end.
+     */
+    fill(value: number, start?: number, end?: number): this;
+
+    /**
+     * Returns the elements of an array that meet the condition specified in a callback function.
+     * @param predicate A function that accepts up to three arguments. The filter method calls
+     * the predicate function one time for each element in the array.
+     * @param thisArg An object to which the this keyword can refer in the predicate function.
+     * If thisArg is omitted, undefined is used as the this value.
+     */
+    filter(predicate: (value: number, index: number, array: T) => any, thisArg?: any): T;
+
+    /**
+     * Returns the value of the first element in the array where predicate is true, and undefined
+     * otherwise.
+     * @param predicate find calls predicate once for each element of the array, in ascending
+     * order, until it finds one where predicate returns true. If such an element is found, find
+     * immediately returns that element value. Otherwise, find returns undefined.
+     * @param thisArg If provided, it will be used as the this value for each invocation of
+     * predicate. If it is not provided, undefined is used instead.
+     */
+    find(predicate: (value: number, index: number, obj: T) => boolean, thisArg?: any): number;
+
+    /**
+     * Returns the index of the first element in the array where predicate is true, and -1
+     * otherwise.
+     * @param predicate find calls predicate once for each element of the array, in ascending
+     * order, until it finds one where predicate returns true. If such an element is found,
+     * findIndex immediately returns that element index. Otherwise, findIndex returns -1.
+     * @param thisArg If provided, it will be used as the this value for each invocation of
+     * predicate. If it is not provided, undefined is used instead.
+     */
+    findIndex(predicate: (value: number, index: number, obj: Int8Array) => boolean, thisArg?: any): number;
+
+    /**
+     * Performs the specified action for each element in an array.
+     * @param callbackfn  A function that accepts up to three arguments. forEach calls the
+     * callbackfn function one time for each element in the array.
+     * @param thisArg  An object to which the this keyword can refer in the callbackfn function.
+     * If thisArg is omitted, undefined is used as the this value.
+     */
+    forEach(callbackfn: (value: number, index: number, array: Int8Array) => void, thisArg?: any): void;
+
+    /**
+     * Returns the index of the first occurrence of a value in an array.
+     * @param searchElement The value to locate in the array.
+     * @param fromIndex The array index at which to begin the search. If fromIndex is omitted, the
+     *  search starts at index 0.
+     */
+    indexOf(searchElement: number, fromIndex?: number): number;
+
+    /**
+     * Adds all the elements of an array separated by the specified separator string.
+     * @param separator A string used to separate one element of an array from the next in the
+     * resulting String. If omitted, the array elements are separated with a comma.
+     */
+    join(separator?: string): string;
+
+    /**
+     * Returns the index of the last occurrence of a value in an array.
+     * @param searchElement The value to locate in the array.
+     * @param fromIndex The array index at which to begin the search. If fromIndex is omitted, the
+     * search starts at index 0.
+     */
+    lastIndexOf(searchElement: number, fromIndex?: number): number;
+
+    /**
+     * The length of the array.
+     */
+    const length: number;
+
+    /**
+     * Calls a defined callback function on each element of an array, and returns an array that
+     * contains the results.
+     * @param callbackfn A function that accepts up to three arguments. The map method calls the
+     * callbackfn function one time for each element in the array.
+     * @param thisArg An object to which the this keyword can refer in the callbackfn function.
+     * If thisArg is omitted, undefined is used as the this value.
+     */
+    map(callbackfn: (value: number, index: number, array: T) => number, thisArg?: any): T;
+
+
+    /**
+     * Calls the specified callback function for all the elements in an array. The return value of
+     * the callback function is the accumulated result, and is provided as an argument in the next
+     * call to the callback function.
+     * @param callbackfn A function that accepts up to four arguments. The reduce method calls the
+     * callbackfn function one time for each element in the array.
+     * @param initialValue If initialValue is specified, it is used as the initial value to start
+     * the accumulation. The first call to the callbackfn function provides this value as an argument
+     * instead of an array value.
+     */
+    reduce<U=number>(callbackfn: (previousValue: U, currentValue: number, currentIndex: number, array: Int8Array) => U, initialValue?: U): U;
+
+
+    /**
+     * Calls the specified callback function for all the elements in an array, in descending order.
+     * The return value of the callback function is the accumulated result, and is provided as an
+     * argument in the next call to the callback function.
+     * @param callbackfn A function that accepts up to four arguments. The reduceRight method calls
+     * the callbackfn function one time for each element in the array.
+     * @param initialValue If initialValue is specified, it is used as the initial value to start
+     * the accumulation. The first call to the callbackfn function provides this value as an argument
+     * instead of an array value.
+     */
+    reduceRight<U=number>(callbackfn: (previousValue: U, currentValue: number, currentIndex: number, array: Int8Array) => U, initialValue?: U): U;
+
+    /**
+     * Reverses the elements in an Array.
+     */
+    reverse(): Int8Array;
+
+    /**
+     * Sets a value or an array of values.
+     * @param array A typed or untyped array of values to set.
+     * @param offset The index in the current array at which the values are to be written.
+     */
+    set(array: Array<number>, offset?: number): void;
+
+    /**
+     * Returns a section of an array.
+     * @param start The beginning of the specified portion of the array.
+     * @param end The end of the specified portion of the array. This is exclusive of the element at the index 'end'.
+     */
+    slice(start?: number, end?: number): T;
+
+    /**
+     * Determines whether the specified callback function returns true for any element of an array.
+     * @param predicate A function that accepts up to three arguments. The some method calls
+     * the predicate function for each element in the array until the predicate returns a value
+     * which is coercible to the Boolean value true, or until the end of the array.
+     * @param thisArg An object to which the this keyword can refer in the predicate function.
+     * If thisArg is omitted, undefined is used as the this value.
+     */
+    some(predicate: (value: number, index: number, array: T) => boolean, thisArg?: any): boolean;
+
+    /**
+     * Sorts an array.
+     * @param compareFn Function used to determine the order of the elements. It is expected to return
+     * a negative value if first argument is less than second argument, zero if they're equal and a positive
+     * value otherwise. If omitted, the elements are sorted in ascending order.
+     * ```ts
+     * [11,2,22,1].sort((a, b) => a - b)
+     * ```
+     */
+    sort(compareFn?: (a: number, b: number) => number): this;
+
+    /**
+     * Gets a new Int8Array view of the ArrayBuffer store for this array, referencing the elements
+     * at begin, inclusive, up to end, exclusive.
+     * @param begin The index of the beginning of the array.
+     * @param end The index of the end of the array.
+     */
+    subarray(begin?: number, end?: number): T;
+
+    /**
+     * Converts a number to a string by using the current locale.
+     */
+    toLocaleString(): string;
+
+    /**
+     * Returns a string representation of an array.
+     */
+    toString(): string;
+
+    /** Returns the primitive value of the specified object. */
+    valueOf(): T;
+
+    [index: number]: number;
 }
 
-declare DataView {
+declare class BaseTypeArray<T> implements TypeArrayInterface<T>{
+
+    constructor(length:number | Array<number>):T;
+
+    /**
+     * Returns a new array from a set of elements.
+     * @param items A set of elements to include in the new array object.
+     */
+    of(...items: number[]): T;
+
+    /**
+     * Creates an array from an array-like or iterable object.
+     * @param arrayLike An array-like or iterable object to convert to an array.
+     * @param mapfn A mapping function to call on every element of the array.
+     * @param thisArg Value of 'this' used to invoke the mapfn.
+     */
+    from<V=number>(arrayLike: ArrayLike<V>, mapfn: (v: V, k: number) => number, thisArg?: any): T;
+
+   /**
+     * Determines whether an array includes a certain element, returning true or false as appropriate.
+     * @param searchElement The element to search for.
+     * @param fromIndex The position in this array at which to begin searching for searchElement.
+     */
+    includes(searchElement: number, fromIndex?: number): boolean;
+}
+
+
+declare class Int8Array extends BaseTypeArray<Int8Array>{
+    /**
+     * The size in bytes of each element in the array.
+     */
+    static const BYTES_PER_ELEMENT: number;
+}
+
+declare class Uint8Array extends BaseTypeArray<Uint8Array> {
+    /**
+     * The size in bytes of each element in the array.
+     */
+    static const BYTES_PER_ELEMENT: number;
+}
+
+declare class Uint8ClampedArray extends BaseTypeArray<Uint8ClampedArray> {
+    /**
+     * The size in bytes of each element in the array.
+     */
+    static const BYTES_PER_ELEMENT: number;
+}
+
+declare class Int16Array extends BaseTypeArray<Int16Array> {
+    /**
+     * The size in bytes of each element in the array.
+     */
+    static const BYTES_PER_ELEMENT: number;
+}
+
+declare class Uint16Array extends BaseTypeArray<Uint16Array> {
+    /**
+     * The size in bytes of each element in the array.
+     */
+    static const BYTES_PER_ELEMENT: number;
+}
+
+declare class  Int32Array extends BaseTypeArray<Int32Array> {
+    /**
+     * The size in bytes of each element in the array.
+     */
+    static const BYTES_PER_ELEMENT: number;
+}
+
+
+declare class  Uint32Array extends BaseTypeArray<Uint32Array> {
+    /**
+     * The size in bytes of each element in the array.
+     */
+    static const BYTES_PER_ELEMENT: number;
+}
+
+
+declare class  Float32Array extends BaseTypeArray<Float32Array> {
+    /**
+     * The size in bytes of each element in the array.
+     */
+    static const BYTES_PER_ELEMENT: number;
+}
+
+declare class  Float64Array extends BaseTypeArray<Float64Array> {
+   /**
+     * The size in bytes of each element in the array.
+     */
+    static const BYTES_PER_ELEMENT: number;
+
+}
+
+declare class DataView {
+
     const buffer: ArrayBuffer;
     const byteLength: number;
     const byteOffset: number;
@@ -1138,6 +1474,112 @@ declare class Set<T>{
    const size: number;
 }
 
+declare interface WeakMap<K extends object, V> {
+   constructor<K extends object, V = any>(entries?: [K, V][] | null): WeakMap<K, V>;
+   delete(key: K): boolean;
+   get(key: K): V | null;
+   has(key: K): boolean;
+   set(key: K, value: V): this;
+}
+
+declare interface WeakSet<T extends object> {
+   constructor<K extends object>(values?: T[] | null): WeakSet<T>;
+   add(value: T): this;
+   delete(value: T): boolean;
+   has(value: T): boolean;
+}
+
+
+/** EventTarget is a DOM interface implemented by objects that can receive events and may have listeners for them. */
+declare interface IEventDispatcher {
+    /**
+     * Appends an event listener for events whose type attribute value is type. 
+     * The callback argument sets the callback that will be invoked when the event is dispatched.
+     */
+    addEventListener(type: string, listener: (event?:Event)=>void ): this;
+    /**
+     * Dispatches a synthetic event event to target and returns true 
+     * if either event's cancelable attribute value is false or its preventDefault() method was not invoked, and false otherwise.
+     */
+    dispatchEvent(event: Event): boolean;
+    /**
+     * Removes the event listener in target's event listener list with the same type, callback, and options.
+     */
+    removeEventListener(type: string, listener?: (event?:Event)=>void ): boolean;
+
+    /**
+    * Checks whether a listener of the specified type has been added
+    */
+    hasEventListener(type: string, listener?: (event?:Event)=>void):boolean;
+}
+
+/** EventTarget is a DOM interface implemented by objects that can receive events and may have listeners for them. */
+declare class EventDispatcher extends Object implements IEventDispatcher{
+    constructor(target?:object);
+}
+
+/** An event which takes place in the DOM. */
+declare class Event extends Object{
+    /**
+     * Returns true or false depending on how event was initialized. True if event goes through its target's ancestors in reverse tree order, and false otherwise.
+     */
+    const bubbles:boolean;
+    /**
+     * Returns true or false depending on how event was initialized. Its return value does not always carry meaning, but true can indicate that part of the operation during which event was dispatched, can be canceled by invoking the preventDefault() method.
+     */
+    const cancelable:boolean;
+    /**
+     * Returns true or false depending on how event was initialized. True if event invokes listeners past a ShadowRoot node that is the root of its target, and false otherwise.
+     */
+    const composed: boolean;
+    /**
+     * Returns the object whose event listener's callback is currently being invoked.
+     */
+    const currentTarget: IEventDispatcher | null;
+    /**
+     * Returns true if preventDefault() was invoked successfully to indicate cancelation, and false otherwise.
+     */
+    const defaultPrevented: boolean;
+    /**
+     * Returns the event's phase, which is one of NONE, CAPTURING_PHASE, AT_TARGET, and BUBBLING_PHASE.
+     */
+    const eventPhase: number;
+    /**
+     * Returns true if event was dispatched by the user agent, and false otherwise.
+     */
+    const isTrusted: boolean;
+    var returnValue: boolean;
+   
+    /**
+     * Returns the object to which event is dispatched (its target).
+     */
+    const target: IEventDispatcher | null;
+    /**
+     * Returns the event's timestamp as the number of milliseconds measured relative to the time origin.
+     */
+    const timeStamp: number;
+    /**
+     * Returns the type of event, e.g. "click", "hashchange", or "submit".
+     */
+    const type: string;
+    
+    /**
+     * If invoked when the cancelable attribute value is true, and while executing a listener for the event with passive set to false, signals to the operation that caused event to be dispatched that it needs to be canceled.
+     */
+    preventDefault(): void;
+    /**
+     * Invoking this method prevents event from reaching any registered event listeners after the current one finishes running and, when dispatched in a tree, also prevents event from reaching any other objects.
+     */
+    stopImmediatePropagation(): void;
+    /**
+     * When dispatched in a tree, invoking this method prevents event from reaching any objects other than the current object.
+     */
+    stopPropagation(): void;
+
+    constructor(type:string, bubbles?:boolean,cancelable?:boolean);
+
+    [key:string]:any;
+}
 
 declare Class<T=any> extends Object {
    static const forName:string
