@@ -58,7 +58,6 @@ class Service{
         }else{
             options =  Object.assign({}, defaultOptions);
         }
-        options.globalTypes=[ path.join(__dirname,'types') ];
         this._options =  options;
         const workspaceFolders = options.cwd;
         try{
